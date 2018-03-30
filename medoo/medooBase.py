@@ -1,6 +1,6 @@
 import re, json
-from pypika import Query, Table, Field, JoinType
-from .medooException import MedooNameParseError, MedooWhereParseError, MedooJoinParseError, MedooInsertParseError, MedooUpdateParseError, MedooDeleteParseError
+from pypika import Query, Table, Field, JoinType, functions
+from .medooException import MedooNameParseError, MedooWhereParseError, MedooJoinParseError, MedooInsertParseError, MedooUpdateParseError, MedooDeleteParseError, MedooCountColumnParseError
 
 class MedooParser(object):
 	
@@ -8,7 +8,7 @@ class MedooParser(object):
 	def alias(name):
 		if not name.endswith(')'):
 			return name.strip(), ''
-		m = re.match(r'^\s*(\w+)\s*\((\w+)\)\s*$', name)
+		m = re.match(r'^\s*([\w*]+)\s*\((\w+)\)\s*$', name)
 		if not m: 
 			raise MedooNameParseError('Cannot parse alias for "%s"' % name)
 		return m.group(1), m.group(2)
@@ -141,6 +141,22 @@ class MedooParser(object):
 		if utype == '/':
 			return field, Field(field) / val
 		raise MedooUpdateParseError('Do not understand update operation in update data: "%s"' % utype)
+		
+	@staticmethod
+	def countColumns(columns, distinct):
+		if isinstance(columns, list):
+			if len(columns) > 1:
+				raise MedooCountColumnParseError('Multiple columns not allowed for count statement: "%s"' % columns)
+			columns = columns[0]
+		col, alias = MedooParser.alias(columns)
+		if distinct and col == '*':
+			raise MedooCountColumnParseError('Need specific column name for distinct: "%s"' % columns)
+		ret = functions.Count(Field(col))
+		if alias:
+			ret = ret.as_(alias)
+		if distinct:
+			ret = ret.distinct()
+		return ret		
 	
 class MedooRecords(object):
 	
@@ -153,6 +169,9 @@ class MedooRecords(object):
 		
 	def __iter__(self):
 		return iter(self)
+		
+	def all(self):
+		return [r for r in self]
 
 class MedooBase(object):
 	
@@ -196,7 +215,8 @@ class MedooBase(object):
 		if table_as: 
 			raise MedooInsertParseError('No alias allowed for insert statement: "%s"' % table)
 		
-		if datas: data = [data] + list(datas)
+		data = [data]
+		if datas: data += list(datas)
 		table = Table(table_org)
 		q = Query.into(table)
 		values = [tuple(d.values()) if isinstance(d, dict) else d for d in data]
@@ -234,7 +254,7 @@ class MedooBase(object):
 			self.history = [self.sql]
 		try:
 			self.cursor.execute(self.sql)
-			if 'commit' in kwargs and kwargs['commit']: 
+			if commit:
 				self.connection.commit()
 			return True
 		except Exception as ex:
@@ -256,7 +276,7 @@ class MedooBase(object):
 			self.history = [self.sql]
 		try:
 			self.cursor.execute(self.sql)
-			if 'commit' in kwargs and kwargs['commit']: 
+			if commit:
 				self.connection.commit()
 			return True
 		except Exception as ex:
@@ -299,6 +319,79 @@ class MedooBase(object):
 		try:
 			self.cursor.execute(self.sql)
 			return self.recordsClass(self.cursor) if self.recordsClass else self.cursor
+		except Exception as ex:
+			self.errors.append(ex)
+			return None
+			
+	def tableExists(self, table):
+		raise NotImplementedError('API not implemented.')
+		
+	def createTable(self, table, schema, drop = True, suffix = ''):
+		raise NotImplementedError('API not implemented.')
+		
+	def dropTable(self, table):
+		raise NotImplementedError('API not implemented.')		
+			
+	def has(self, table, join = None, columns = '*', where = None):
+		rs = self.select(table, join, columns, where)
+		return bool(next(rs))
+		
+	def get(self, table, join = None, columns = '*', where = None):
+		rs = self.select(table, join, columns, where)
+		if not rs: return None
+		r  = next(rs)
+		if not r: return None
+		return r.values()[0]
+		
+	def count(self, table, join = None, columns = '*', where = None, distinct = False):
+		table_org, table_as = MedooParser.alias(table)
+		table = Table(table_org)
+		q = Query.from_(table)
+		if table_as:
+			q = q.as_(table_as)
+			
+		if join:
+			for key, val in join.items():
+				jtable, jt_as, jtype = MedooParser.jointable(key)
+				joinon = MedooParser.where(val)
+				q = q.join(jtable, how = jtype)
+				if jt_as: q = q.as_(jt_as)
+				q = q.on(joinon)					
+		
+		q = q.select(MedooParser.countColumns(columns, distinct))
+		
+		if where:
+			q = q.where(MedooParser.where(table, where))
+		
+		self.sql = str(q)
+		if self.logging:
+			self.history.append(self.sql)
+		else:
+			self.history = [self.sql]
+		
+		try:
+			self.cursor.execute(self.sql)
+			rs = self.recordsClass(self.cursor) if self.recordsClass else self.cursor
+			if not rs: return None
+			return next(rs)
+		except Exception as ex:
+			self.errors.append(ex)
+			return None
+			
+	def query(self, sql, commit = True):
+		self.sql = sql.strip()
+		if self.logging:
+			self.history.append(self.sql)
+		else:
+			self.history = [self.sql]
+		try:
+			self.cursor.execute(self.sql)
+			if commit:
+				self.connection.commit()
+			if self.sql.upper().startswith('SELECT'):
+				return self.recordsClass(self.cursor) if self.recordsClass else self.cursor
+			else:
+				return True
 		except Exception as ex:
 			self.errors.append(ex)
 			return None

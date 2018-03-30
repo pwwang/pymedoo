@@ -361,16 +361,13 @@ m.delete("account", {
 
 ## Error
 ```python
-m.select("bccount", None, [
-	"user_name",
-	"email"
-], {
+m.select("account", None, '* WHERE', {
 	"user_id[<]":  20
 })
  
 print m.error()
  
-# [Exception:  table "bccount" not exists.]
+# [OperationalError('near "*": syntax error',)]
 ```
 
 ## Log

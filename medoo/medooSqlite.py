@@ -36,7 +36,21 @@ class MedooSqlite(MedooBase):
 		arguments['database'] = arguments['database_file']
 		del arguments['database_file']
 		return sqlite3.connect(**arguments)
-
 		
+	def tableExists(self, table):
+		return self.has('sqlite_master', None, 'name', {'type': 'table', 'name': table})
+		
+	def dropTable(self, table):
+		return self.query('DROP TABLE IF EXISTS "%s"' % table)
+
+	def createTable(self, table, schema, drop = True, suffix = ''):
+		if drop and self.tableExists(table):
+			self.dropTable()
+			
+		fields = ', '.join([
+			'"%s" %s' % (k, v) for k,v in schema.items()
+		])
+		sql = 'CREATE TABLE IF NOT EXISTS "%s" (%s) %s' % (table, fields, suffix)
+		return self.query(sql)
 		
 		

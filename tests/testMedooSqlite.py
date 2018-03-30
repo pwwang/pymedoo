@@ -101,5 +101,79 @@ class TestMedooSqlite(helpers.TestCase):
 		r = next(rs)
 		self.assertIsNone(r)
 		
+	def dataProvider_testHas(self):
+		m = MedooSqlite()
+		m.cursor.execute('create table "table" ("a" text, "b" int)')
+		m.cursor.execute('insert into "table" values(\'a1\', 1)')
+		m.cursor.execute('insert into "table" values(\'a2\', 2)')
+		m.cursor.execute('insert into "table" values(\'a3\', 3)')
+		m.cursor.execute('insert into "table" values(\'a4\', 4)')
+		m.cursor.execute('insert into "table" values(\'a5\', 5)')
+		m.cursor.execute('insert into "table" values(\'a6\', 6)')
+		m.connection.commit()
+		yield m, "table", None, 'a', {'a': 'a1'}, True
+		yield m, "table", None, 'a', {'a': 'a8'}, False
+		
+	def testHas(self, m, table, join, columns, where, ret):
+		r = m.has(table, join, columns, where)
+		self.assertEqual(r, ret)
+		
+	def dataProvider_testCount(self):
+		m = MedooSqlite()
+		m.cursor.execute('create table "table" ("a" text, "b" int)')
+		m.cursor.execute('insert into "table" values(\'a1\', 1)')
+		m.cursor.execute('insert into "table" values(\'a2\', 2)')
+		m.cursor.execute('insert into "table" values(\'a3\', 3)')
+		m.cursor.execute('insert into "table" values(\'a4\', 4)')
+		m.cursor.execute('insert into "table" values(\'a5\', 5)')
+		m.cursor.execute('insert into "table" values(\'a6\', 6)')
+		m.cursor.execute('insert into "table" values(\'a6\', 6)')
+		m.connection.commit()
+		yield m, "table", None, '*(c)', None, False, 7
+		yield m, "table", None, 'a(c)', None, True, 6
+	
+	def testCount(self, m, table, join, columns, where, distinct, ret):
+		r = m.count(table, join, columns, where, distinct)
+		self.assertEqual(r.c, ret)
+		
+	def dataProvider_testTableExists(self):
+		m = MedooSqlite()
+		m.cursor.execute('create table "table1" ("a" text, "b" int)')
+		m.cursor.execute('create table "table2" ("a" text, "b" int)')
+		m.connection.commit()
+		yield m, "table1", True
+		yield m, "table2", True
+		yield m, "table3", False
+		
+	def testTableExists(self, m, table, ret):
+		r = m.tableExists(table)
+		self.assertEqual(r, ret)
+	
+	def dataProvider_testDropTable(self):
+		m = MedooSqlite()
+		m.cursor.execute('create table "table1" ("a" text, "b" int)')
+		m.cursor.execute('create table "table2" ("a" text, "b" int)')
+		m.connection.commit()
+		yield m, "table1"
+		yield m, "table2"
+	
+	def testDropTable(self, m, table):
+		m.dropTable(table)
+		self.assertFalse(m.tableExists(table))
+		
+	def dataProvider_testCreateTable(self):
+		m = MedooSqlite()
+		m.cursor.execute('create table "table1" ("a" text, "b" int)')
+		m.connection.commit()
+		yield m, "table1", {"a": "text", "c": "int"}, False
+		
+	def testCreateTable(self, m, table, schema, drop = True, suffix = ''):
+		r = m.createTable(table, schema, drop, suffix)
+		if not drop:
+			m.insert(table, {'a':1, 'b':2})
+			self.assertIs(r, True)
+		else:
+			self.assertTrue(m.tableExists(table))
+		
 if __name__ == '__main__':
 	unittest.main(verbosity = 2)

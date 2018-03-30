@@ -19,3 +19,6 @@ class MedooUpdateParseError(Exception):
 	
 class MedooDeleteParseError(Exception):
 	pass
+	
+class MedooCountColumnParseError(Exception):
+	pass
