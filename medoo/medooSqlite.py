@@ -1,4 +1,5 @@
 import sqlite3
+from pypika import Table
 from .medooBase import MedooBase, MedooRecords
 
 class MedooSqliteRecord(dict):
@@ -37,20 +38,22 @@ class MedooSqlite(MedooBase):
 		del arguments['database_file']
 		return sqlite3.connect(**arguments)
 		
-	def tableExists(self, table):
-		return self.has('sqlite_master', None, 'name', {'type': 'table', 'name': table})
+	def tableExists(self, table, schema = None):
+		return self.has('sqlite_master', None, 'name', {'type': 'table', 'name': table}, schema)
 		
-	def dropTable(self, table):
-		return self.query('DROP TABLE IF EXISTS "%s"' % table)
+	def dropTable(self, table, commit = True, schema = None):
+		table = Table(table, schema = schema)
+		return self.query('DROP TABLE IF EXISTS %s' % table, commit)
 
-	def createTable(self, table, schema, drop = True, suffix = ''):
+	def createTable(self, table, fields, drop = True, suffix = '', commit = True, schema = None):
 		if drop and self.tableExists(table):
-			self.dropTable()
-			
-		fields = ', '.join([
-			'"%s" %s' % (k, v) for k,v in schema.items()
+			self.dropTable(table, schema)
+		
+		table = Table(table, schema = schema)
+		fieldstr = ', '.join([
+			'"%s" %s' % (k, v) for k,v in fields.items()
 		])
-		sql = 'CREATE TABLE IF NOT EXISTS "%s" (%s) %s' % (table, fields, suffix)
-		return self.query(sql)
+		sql = 'CREATE TABLE IF NOT EXISTS %s (%s) %s' % (table, fieldstr, suffix)
+		return self.query(sql, commit)
 		
 		

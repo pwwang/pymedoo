@@ -2,23 +2,11 @@
 class MedooInitializationError(Exception):
 	pass
 	
-class MedooNameParseError(Exception):
+class MedooFieldParseError(Exception):
+	pass
+	
+class MedooTableParseError(Exception):
 	pass
 	
 class MedooWhereParseError(Exception):
-	pass
-	
-class MedooJoinParseError(Exception):
-	pass
-	
-class MedooInsertParseError(Exception):
-	pass
-	
-class MedooUpdateParseError(Exception):
-	pass
-	
-class MedooDeleteParseError(Exception):
-	pass
-	
-class MedooCountColumnParseError(Exception):
 	pass

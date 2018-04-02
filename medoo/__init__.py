@@ -1,5 +1,7 @@
+# expose Field, so it can be used as value in update set
+from .medooBase import Field 
 from .medooSqlite import MedooSqlite
-from .medooException import MedooInitializationError
+from .medooException import MedooInitializationError, MedooTableParseError, MedooFieldParseError, MedooWhereParseError
 
 DATABASE_TYPES = {
 	'MedooSqlite': ['sqlite', 'sqlite3']

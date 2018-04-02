@@ -1,5 +1,6 @@
 import helpers, unittest, sqlite3
 from medoo.medooSqlite import MedooSqliteRecord, MedooSqlite
+from medoo import MedooTableParseError, MedooFieldParseError, Field
 
 class TestMedooSqliteRecord(helpers.TestCase):
 	
@@ -30,37 +31,62 @@ class TestMedooSqlite(helpers.TestCase):
 	
 	def dataProvider_testSelect(self):
 		m = MedooSqlite()
-		m.cursor.execute('create table "table" ("a" text, "b" text)')
-		m.cursor.execute('insert into "table" values(\'a1\', \'b1\')')
-		m.cursor.execute('insert into "table" values(\'a2\', \'b2\')')
-		m.cursor.execute('insert into "table" values(\'a3\', \'b3\')')
-		m.cursor.execute('insert into "table" values(\'a4\', \'b4\')')
-		m.cursor.execute('insert into "table" values(\'a5\', \'b5\')')
-		m.cursor.execute('insert into "table" values(\'a6\', \'b6\')')
+		m.cursor.execute('create table "table1" ("a" int, "b" text)')
+		m.cursor.execute('insert into "table1" values(1, \'b1\')')
+		m.cursor.execute('insert into "table1" values(2, \'b2\')')
+		m.cursor.execute('insert into "table1" values(3, \'b3\')')
+		m.cursor.execute('insert into "table1" values(4, \'b4\')')
+		m.cursor.execute('insert into "table1" values(5, \'b5\')')
+		m.cursor.execute('insert into "table1" values(6, \'b6\')')
+		m.cursor.execute('create table "table2" ("c" int, "d" text, "e" int)')
+		m.cursor.execute('insert into "table2" values(1, \'d1\', 3)')
+		m.cursor.execute('insert into "table2" values(2, \'d2\', 4)')
+		m.cursor.execute('insert into "table2" values(3, \'d3\', 1)')
+		m.cursor.execute('insert into "table2" values(4, \'d4\', 5)')
+		m.cursor.execute('insert into "table2" values(5, \'d5\', 2)')
+		m.cursor.execute('insert into "table2" values(6, \'d6\', 6)')
 		m.connection.commit()
-		yield m, 'table', None, ['a'], {'b': 'b1'}, {"a": "a1"}
-		yield m, 'table', None, '*', {'b[~]': 'b%', 'b[!]': 'b1'}, {"a": "a2", "b": "b2"}
+		yield m, '[<>]table1', None, '*', None, None, MedooTableParseError
+		yield m, 'table1', None, ['a'], {'b': 'b1'}, {"a": 1}
+		yield m, 'table2', None, '*', {'d[~]': 'd%', 'd[!]': 'd1'}, {"c": 2, "d": "d2", "e": 4}
+		yield m, 'table1(t1)', None, 't1.b', {'t1.a': 5}, {"b": "b5"}
+		yield m, 'table1(t1)', None, 't1.b(x)', {'t1.a': 5}, {"x": "b5"}
+		yield m, 'table1(t1)', {'[><]table2(t2)': {'a': 'c'}}, 't2.d(y)', {'t1.a': 6}, {"y": "d6"}
+		yield m, 'table1(t1)', {'table2(t2)': {'a': 'c'}}, 't2.d(y)', {'t1.a[>]':Field('t2.e')}, {"y": "d3"}
+		yield m, 'table1(t1)', {'table2(t2)': {'a': 'c'}}, 't2.d(y)', {'t1.a[>]':Field('t2.e') + 2}, {"y": "d5"}
 	
-	def testSelect(self, m, table, join, columns, where, record):
-		rs = m.select(table, join, columns, where)
-		r  = next(rs)
-		self.assertDictEqual(r, record)
-		for k, v in record.items():
-			self.assertEqual(getattr(r, k), v)
+	def testSelect(self, m, table, join, columns, where, record, exception = None):
+		if exception:
+			self.assertRaises(exception, m.select, table, join, columns, where)
+		else:
+			rs = m.select(table, join, columns, where)
+			r  = next(rs)
+			self.assertDictEqual(r, record)
+			for k, v in record.items():
+				self.assertEqual(getattr(r, k), v)
 			
 	def dataProvider_testInsert(self):
 		m = MedooSqlite()
 		m.cursor.execute('create table "table" ("a" text, "b" text)')
 		m.connection.commit()
-		yield m, "table", ["a", "b"], [("a1", "b1"), ("a2", "b2")], True
+		yield m, "[><]table", ["t1.a", "b"], [("a1", "b1")], True, MedooFieldParseError
+		yield m, "table", ["t1.a", "b"], [("a1", "b1")], True, MedooFieldParseError
+		yield m, "table", ["a(x)", "b"], [("a1", "b1")], True, MedooFieldParseError
+		yield m, "table", ["table.a", "b"], [("a1", "b1"), ("a2", "b2")], True
 			
-	def testInsert(self, m, table, columns, datas, commit):
+	def testInsert(self, m, table, columns, datas, commit, exception = None):
 		data = datas.pop(0)
-		m.insert(table, {col:data[i] for i, col in enumerate(columns)}, *datas, commit = commit)
-		rs = m.select(table, None, columns)
-		r = next(rs)
-		for i, col in enumerate(columns):
-			self.assertEqual(getattr(r, col), data[i])
+		data = {col:data[i] for i, col in enumerate(columns)}
+		if exception:
+			self.assertRaises(exception, m.insert, table, data, *datas, commit = commit)
+		else:
+			m.insert(table, data, *datas, commit = commit)
+			rs = m.select(table, None, columns)
+			for i, r in enumerate(rs):
+				if i == 0:
+					self.assertDictEqual(r, data)
+				else:
+					self.assertTupleEqual(tuple(r.values()), datas[i-1])
 			
 	def dataProvider_testUpdate(self):
 		m = MedooSqlite()
@@ -134,6 +160,7 @@ class TestMedooSqlite(helpers.TestCase):
 	
 	def testCount(self, m, table, join, columns, where, distinct, ret):
 		r = m.count(table, join, columns, where, distinct)
+		rs = m.query('SELECT COUNT(DISTINCT "a") "c" FROM "table"')
 		self.assertEqual(r.c, ret)
 		
 	def dataProvider_testTableExists(self):
