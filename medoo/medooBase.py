@@ -1,7 +1,14 @@
 import re, json
 from pypika import Query, Table, JoinType, functions, Field as PkField
-from pypika.terms import ArithmeticExpression
+from pypika.terms import ArithmeticExpression, BasicCriterion
+from pypika.enums import Comparator
 from .medooException import MedooFieldParseError, MedooWhereParseError, MedooTableParseError
+
+class Raw(str):
+	pass
+
+class Matching(Comparator):
+	regexp = ' REGEXP '
 
 class Field(PkField):
 	def __init__(self, name, alias = None, table = None, schema = None):
@@ -115,12 +122,12 @@ class MedooParser(object):
 				
 		if not operation:
 			if isinstance(val, (list, tuple)):
-				return field.isin(list(val))
+				return field.isin(list(set(val)))
 			else:
 				return field == val
 		if operation == '!':
 			if isinstance(val, (list, tuple)):
-				return field.notin(list(val))
+				return field.notin(list(set(val)))
 			else:
 				return field != val
 		if operation == '>':
@@ -136,6 +143,8 @@ class MedooParser(object):
 		if operation == '><':
 			return (not field[val[0]:val[1]])
 		if operation == '~':
+			if isinstance(val, list):
+				val = list(set(val))
 			if isinstance(val, list) and len(val) == 1:
 				val = val[0]
 			if isinstance(val, list):
@@ -147,6 +156,8 @@ class MedooParser(object):
 			else:
 				return field.like(MedooParser.likeValue(val))
 		if operation == '!~':
+			if isinstance(val, list):
+				val = list(set(val))
 			if isinstance(val, list) and len(val) == 1:
 				val = val[0]
 			if isinstance(val, list):
@@ -157,6 +168,34 @@ class MedooParser(object):
 				return ret
 			else:
 				return field.not_like(MedooParser.likeValue(val))
+		if operation == '~~':
+			if isinstance(val, list):
+				val = list(set(val))
+			if isinstance(val, list) and len(val) == 1:
+				val = val[0]
+			if isinstance(val, list):
+				val0 = val.pop(0)
+				ret = functions.Upper(field).like(MedooParser.likeValue(val0.upper()))
+				for v in val: 
+					ret |= functions.Upper(field).like(MedooParser.likeValue(v.upper()))
+				return ret
+			else:
+				return functions.Upper(field).like(MedooParser.likeValue(val.upper()))
+		if operation == '!~~':
+			if isinstance(val, list):
+				val = list(set(val))
+			if isinstance(val, list) and len(val) == 1:
+				val = val[0]
+			if isinstance(val, list):
+				val0 = val.pop(0)
+				ret = functions.Upper(field).not_like(MedooParser.likeValue(val0.upper()))
+				for v in val: 
+					ret &= functions.Upper(field).not_like(MedooParser.likeValue(v.upper()))
+				return ret
+			else:
+				return functions.Upper(field).not_like(MedooParser.likeValue(val.upper()))
+		if operation == 'REGEXP':
+			return BasicCriterion(Matching.regexp, field, field._wrap(val), alias = bool(alias))
 		raise MedooWhereParseError('Do not understand the relation: "%s".' % operation)
 		
 	@staticmethod
@@ -167,8 +206,8 @@ class MedooParser(object):
 			else:
 				return MedooParser.where('AND', key, tables = tables)
 		elif key.startswith('AND'):
-			if not isinstance(value, dict) or len(value) < 2:
-				raise MedooWhereParseError('Expect a len > 1 dict for AND clause.')
+			#if not isinstance(value, dict) or len(value) < 2:
+			#	raise MedooWhereParseError('Expect a len > 1 dict for AND clause.')
 			k, v = value.items()[0]
 			del value[k]
 			expr = MedooParser.where(k, v, tables = tables)
@@ -176,8 +215,8 @@ class MedooParser(object):
 				expr &= MedooParser.where(k, v, tables = tables)
 			return expr
 		elif key.startswith('OR'):
-			if not isinstance(value, dict) or len(value) < 2:
-				raise MedooWhereParseError('Expect a len > 1 dict for OR clause.')
+			#if not isinstance(value, dict) or len(value) < 2:
+			#	raise MedooWhereParseError('Expect a len > 1 dict for OR clause.')
 			k, v = value.items()[0]
 			del value[k]
 			expr = MedooParser.where(k, v, tables = tables)
@@ -230,7 +269,6 @@ class MedooBase(object):
 		self.connection = self._connect(*args, **kwargs)
 		self.cursor = self.connection.cursor()
 		self.recordsClass = MedooRecords
-		self.sql = '' # last query
 		self.history = []
 		self.errors = []
 		self.lastid = None
@@ -249,10 +287,16 @@ class MedooBase(object):
 			self.close()
 			
 	def last(self):
-		return self.sql
+		return self.history[-1] if self.history else ''
+		
+	def log(self):
+		return self.history
 		
 	def error(self):
 		return self.errors
+		
+	def commit(self):
+		self.connection.commit()
 	
 	# If data is an ordered dict, then datas could be tuples
 	# otherwise, datas also should be dicts
@@ -273,6 +317,7 @@ class MedooBase(object):
 				raise MedooFieldParseError('Cannot insert with field of a different table: "%s"' % key)
 			keys.append(key)
 			values.append(val)
+
 		q = Query.into(table).columns(*keys).insert(*values)
 		for data in datas:
 			if isinstance(data, tuple):
@@ -280,26 +325,15 @@ class MedooBase(object):
 			else:
 				values = [data[key] for key in keys]
 				q = q.insert(*values)
-			
-		self.sql = str(q)
-		if self.logging:
-			self.history.append(self.sql)
-		else:
-			self.history = [self.sql]
-		try:
-			self.cursor.execute(self.sql)
-			if 'commit' in kwargs and kwargs['commit']: 
-				self.connection.commit()
-			return True
-		except Exception as ex:
-			self.errors.append(ex)
-			return False
+		
+		return self.query(q, 'commit' in kwargs and kwargs['commit'])
 			
 	def update(self, table, data, where = None, commit = True, schema = None):
 		tname = table
 		table = Table(tname, schema = schema)
 		
 		q = Query.update(table)
+		raws = []
 		for key, val in data.items():
 			t, field, alias, operation = MedooParser.field(key)
 			if alias:
@@ -311,24 +345,22 @@ class MedooBase(object):
 					val = json.dumps(val)
 				else:
 					val = getattr(PkField(field, table = table), operation)(val)
-			q = q.set(field, val)
+			if isinstance(val, Raw):
+				q = q.set(field, '{raw#%s}' % len(raws))
+				raws.append(val)
+			else:
+				q = q.set(field, val)
 
 		if where:
 			q = q.where(MedooParser.where(where))
+			
+		q = str(q)
+		# get raw back
+		for i, raw in enumerate(raws):
+			regex = r'("|\'|`)?\{raw#%s\}(\1)?' % i
+			q = re.sub(regex, raw, q)
 
-		self.sql = str(q)
-		if self.logging:
-			self.history.append(self.sql)
-		else:
-			self.history = [self.sql]
-		try:
-			self.cursor.execute(self.sql)
-			if commit:
-				self.connection.commit()
-			return True
-		except Exception as ex:
-			self.errors.append(ex)
-			return False
+		return self.query(q, commit)
 			
 	# where required to avoid all data deletion
 	def delete(self, table, where, commit = True, schema = None):
@@ -337,19 +369,7 @@ class MedooBase(object):
 		
 		q = Query.from_(table).where(MedooParser.where(where)).delete()
 		
-		self.sql = str(q)
-		if self.logging:
-			self.history.append(self.sql)
-		else:
-			self.history = [self.sql]
-		try:
-			self.cursor.execute(self.sql)
-			if commit:
-				self.connection.commit()
-			return True
-		except Exception as ex:
-			self.errors.append(ex)
-			return False
+		return self.query(q, commit)
 		
 		
 	def select(self, table, join = None, columns = '*', where = None, schema = None):
@@ -393,18 +413,7 @@ class MedooBase(object):
 		if where:
 			q = q.where(MedooParser.where(where, tables = tables))
 		
-		self.sql = str(q)
-		if self.logging:
-			self.history.append(self.sql)
-		else:
-			self.history = [self.sql]
-		
-		try:
-			self.cursor.execute(self.sql)
-			return self.recordsClass(self.cursor) if self.recordsClass else self.cursor
-		except Exception as ex:
-			self.errors.append(ex)
-			return None
+		return self.query(q)
 			
 	def tableExists(self, table, schema = None):
 		raise NotImplementedError('API not implemented.')
@@ -470,32 +479,21 @@ class MedooBase(object):
 		if where:
 			q = q.where(MedooParser.where(where, tables = tables))
 		
-		self.sql = str(q)
-		if self.logging:
-			self.history.append(self.sql)
-		else:
-			self.history = [self.sql]
-		
-		try:
-			self.cursor.execute(self.sql)
-			rs = self.recordsClass(self.cursor) if self.recordsClass else self.cursor
-			if not rs: return None
-			return next(rs)
-		except Exception as ex:
-			self.errors.append(ex)
-			return None
+		ret = self.query(q)
+		if not ret: return None
+		return next(ret)
 			
 	def query(self, sql, commit = True):
-		self.sql = sql.strip()
+		sql = str(sql).strip()
 		if self.logging:
-			self.history.append(self.sql)
+			self.history.append(sql)
 		else:
-			self.history = [self.sql]
+			self.history = [sql]
 		try:
-			self.cursor.execute(self.sql)
+			self.cursor.execute(sql)
 			if commit:
 				self.connection.commit()
-			if self.sql.upper().startswith('SELECT'):
+			if sql.upper().startswith('SELECT'):
 				return self.recordsClass(self.cursor) if self.recordsClass else self.cursor
 			else:
 				return True

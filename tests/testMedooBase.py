@@ -1,6 +1,7 @@
 import helpers, unittest
-from pypika import Query, Table, Field, JoinType
-from medoo.medooBase import MedooParser, MedooRecords, MedooBase
+from pypika import Query, Table, Field, JoinType, functions
+from pypika.terms import BasicCriterion
+from medoo.medooBase import MedooParser, MedooRecords, MedooBase, Matching
 from medoo import Medoo, MedooSqlite, MedooInitializationError, MedooTableParseError, MedooFieldParseError, MedooWhereParseError
 
 import sqlite3
@@ -70,8 +71,11 @@ class TestMedooParser(helpers.TestCase):
 		yield 'table.col[><]', (1, 2), not table.col[1:2]
 		#10
 		yield 'table.col[~]', 'a', table.col.like('%a%')
+		yield 'table.col[~~]', 'a', functions.Upper(table.col).like('%A%')
 		yield 'table.col[~]', ['a', 'b'], table.col.like('%a%') | table.col.like('%b%')
+		yield 'table.col[~~]', ['a', 'b'], functions.Upper(table.col).like('%A%') | functions.Upper(table.col).like('%B%')
 		yield 'table.col[!~]', ['a', 'b'], table.col.not_like('%a%') & table.col.not_like('%b%')
+		yield 'table.col[!~~]', ['a', 'b'], functions.Upper(table.col).not_like('%A%') & functions.Upper(table.col).not_like('%B%')
 		yield 'table.col[~]', 'a%', table.col.like('a%')
 		yield 'col1[>]', Field('col2'), table.col1 > table.col2
 		#15
@@ -99,11 +103,12 @@ class TestMedooParser(helpers.TestCase):
 		}, None, (table.a == 'b') & table.c[10:20] & ((table.d.like('%x%')) | (table.d != 'z'))
 		yield {'a': 'b'}, None, table.a == "b"
 		yield {'a': 'b', 'c': 'd'}, None, (table.a == "b") & (table.c == 'd')
-		yield {'AND': {'a': 'b'}}, None, None, MedooWhereParseError
+		yield {'AND': {'a': 'b'}}, None, table.a == 'b'#None, MedooWhereParseError
 		yield {'AND': {'a': 'b', 'c': 'd'}}, None, (table.a == "b") & (table.c == 'd')
-		yield {'OR': {'a': 'b'}}, None, None, MedooWhereParseError
+		yield {'OR': {'a': 'b'}}, None, table.a == 'b'#None, MedooWhereParseError
 		yield {'OR': {'a': 'b', 'c': 'd'}}, None, (table.a == "b") | (table.c == 'd')
 		yield 'a[!]', 'b', table.a != 'b'
+		yield {'OR # c2': {'c2[REGEXP] # 3': '(^|\\|)ANAME5(\\||$)', 'c2[REGEXP] # 2': '(^|\\|)ANAME4(\\||$)', 'c2[REGEXP] # 1': '(^|\\|)ALIAS2(\\||$)', 'c2[REGEXP] # 0': '(^|\\|)A1(\\||$)'}}, None, BasicCriterion(Matching.regexp, table.c2, table.c2._wrap('(^|\\|)ANAME5(\\||$)')) | BasicCriterion(Matching.regexp, table.c2, table.c2._wrap('(^|\\|)ANAME4(\\||$)')) | BasicCriterion(Matching.regexp, table.c2, table.c2._wrap('(^|\\|)ALIAS2(\\||$)')) | BasicCriterion(Matching.regexp, table.c2, table.c2._wrap('(^|\\|)A1(\\||$)')) 
 	
 	def testWhere(self, key, val, output, exception = None):
 		if exception:
