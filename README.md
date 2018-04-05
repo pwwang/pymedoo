@@ -43,7 +43,7 @@ m.select("account", columns = "user_name", where = {
 m.select("account", columns = "user_name", where = {
 	"user_id[!]": 200
 })
-# WHERE user_id != 200
+# WHERE user_id <> 200
  
 m.select("account", columns = "user_name", where = {
 	"age[<>]":  [200, 500]
@@ -54,15 +54,15 @@ m.select("account", columns = "user_name", where = {
 m.select("account", columns = "user_name", where = {
 	"age[><]":  [200, 500]
 })
-# WHERE age NOT BETWEEN 200 AND 500
+# WHERE NOT age BETWEEN 200 AND 500
 
 m.select("account", columns = "user_name", where = {
-	"AND":  [
+	"AND":  {
 		"user_name[!]":  "foo",
 		"user_id[!]":  1024,
 		"email[!]":  ["foo@bar.com", "cat@dog.com", "admin@medoo.in"],
-		"promoted[!]":  True
-	]
+		"promoted[!]":  1
+	}
 })
 # WHERE
 # `user_name` != 'foo' AND
@@ -161,15 +161,13 @@ m.select("account", columns = '*', where = {
 ### Columns Relationship
 ```python
 m.select("post", join = {
-		"[>]account":  ["author_id":  "user_id"],
-	}, columns = {
+		"[>]account":  {"user_id":  "author_id"},
+	}, columns = [
 		"post.id",
 		"post.content"
-	}, where = {
+	], where = {
 		"AND":  {
-			# Connect two column with condition sign like [=], [>], [<], [!=] as one of array value
-			"post.restrict[<]account.age",
-			
+			"post.restrict[<]": medoo.Field("account.age"), # or Field("age", table = "account")			
 			"account.user_name":  "foo",
 			"account.email":  "foo@bar.com",
 		}
@@ -201,6 +199,12 @@ m.select("person", columns = "id",  where = {
 })
  
 WHERE "city" NOT LIKE '%lon%'
+
+m.select("person", columns = "id",  where = {
+	"city[!~]":  ["lon", "foo", "bar"]
+})
+ 
+WHERE "city" NOT LIKE '%lon%' AND "city" NOT LIKE '%foo%' AND "city" NOT LIKE '%bar%'
 ```
 
 ## Select
@@ -246,11 +250,11 @@ datas = m.select("account", columns = "user_name")
 # [<>] == FULL JOIN
 # [><] == INNER JOIN
  
-m.select("post", [
+m.select("post", {
 	# Here is the table relativity argument that tells the relativity between the table you want to join.
  
 	# The row author_id from table post is equal the row user_id from table account
-	"[>]account":  ["author_id":  "user_id"],
+	"[>]account":  {"author_id":  "user_id"},
  
 	# The row user_id from table post is equal the row user_id from table album.
 	# This is a shortcut to declare the relativity if the row name are the same in both table.
@@ -272,7 +276,7 @@ m.select("post", [
 	"[>]account":  [
 		"author_id":  "user_id",
 		"album.user_id":  "user_id"
-	]
+	}
 ], [
 	"post.post_id",
 	"post.title",
