@@ -7,7 +7,7 @@ Note: currently only sqlite is supported.
 
 ## Install
 ```bash
-pip install git+git:#github.com/pwwang/pymedoo.git
+pip install git+git://github.com/pwwang/pymedoo.git
 ```
 
 ## Initialize
@@ -422,5 +422,5 @@ print m.last()
 # INSERT INTO "account" ("user_name", "email") VALUES ('foo', 'foo@bar.com')
 ```
 
-[1]: https:#medoo.in/
-[2]: https:#github.com/kayak/pypika
+[1]: https://medoo.in/
+[2]: https://github.com/kayak/pypika
