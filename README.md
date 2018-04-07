@@ -2,9 +2,6 @@
 A lightweight database framework for python inspired by [Medoo][1].  
 Note: currently only sqlite is supported.
 
-## Dependency:
-- [pypika][2]
-
 ## Install
 ```bash
 pip install git+git://github.com/pwwang/pymedoo.git
