@@ -90,7 +90,7 @@ class Dialect(object):
 	
 	@staticmethod
 	def quote(item):
-		return '"%s"' % item
+		return '"%s"' % item.replace('"', '""')
 	
 	@staticmethod
 	def alias(item, as_):
@@ -103,24 +103,31 @@ class Dialect(object):
 		elif isinstance(item, (Raw, Field)):
 			return item.sql()
 		else:
-			return "'" + repr('"' + item)[2:]
+			return "'{}'".format(item.replace("'", "''"))
 			
 	@staticmethod
 	def distinct(*fields, **kwargs):
-		return 'DISTINCT ' + ','.join([Field.stringify(field) for field in fields])
+		return 'DISTINCT ' + ','.join([Field.stringify(field, False) for field in fields])
 		
 	@staticmethod
 	def count(*fields, **kwargs):
+		if not fields: fields = ['*']
 		dialect = Dialect
 		if 'dialect' in kwargs and kwargs['dialect']:
 			dialect = kwargs['dialect']
 		if len(fields) > 1:
 			raise FieldParseError('Only 1 field allow for COUNT: "%s"' % fields)
+		
 		fieldsql = Field.stringify(fields[0], False)
 		if 'alias' in kwargs:
 			return dialect.alias('COUNT(%s)' % fieldsql, dialect.quote(kwargs['alias']))
 		else:
 			return 'COUNT(%s)' % fieldsql
+			
+	@staticmethod
+	def json(field, value):
+		import json
+		return field.sql() + '=' + field.dialect.value(json.dumps(value))
 		
 	@staticmethod
 	def limit(offset, lim):
@@ -317,6 +324,7 @@ class Field(object):
 			return field.sql()
 		elif isinstance(field, Raw):
 			return str(field)
+		return str(field)
 			
 	@staticmethod
 	def parse(fieldlist, dialect = None):
@@ -413,10 +421,11 @@ class Where(object):
 		
 class JoinOnTerm(object):
 	
-	def __init__(self, key, value, table, dialect = None):
-		self.key   = key
-		self.value = value
-		self.table = table
+	def __init__(self, key, value, table, primary_table, dialect = None):
+		self.key     = key
+		self.value   = value
+		self.table   = table
+		self.ptable  = primary_table
 		self.dialect = dialect or Dialect
 		
 	def sql(self):
@@ -424,6 +433,8 @@ class JoinOnTerm(object):
 		right = Field.parse(self.value)[0]
 		if isinstance(left, Field) and not left.table:
 			left.table = self.table.alias or self.table.table
+		if isinstance(right, Field) and not right.table:
+			right.table = self.ptable
 		return Field.stringify(left, False) + '=' + Field.stringify(right, False)
 		
 	def __str__(self):
@@ -431,16 +442,20 @@ class JoinOnTerm(object):
 		
 class JoinOn(object):
 	
-	def __init__(self, joinondict, table = None, dialect = None):
+	def __init__(self, joinondict, table = None, primary_table = None, dialect = None):
 		self.joinondict = joinondict
 		self.dialect    = dialect or Dialect
 		self.table      = table
+		if not isinstance(primary_table, Table):
+			self.ptable = primary_table
+		else:
+			self.ptable = primary_table.alias or primary_table.table
 	
 	def sql(self):
 		
 		sqlitems = []
 		for key, val in self.joinondict.items():
-			sqlitems.append(JoinOnTerm(key, val, self.table, self.dialect).sql())
+			sqlitems.append(JoinOnTerm(key, val, self.table, self.ptable, self.dialect).sql())
 		return ' AND '.join(sqlitems)
 		
 	def __str__(self):
@@ -450,6 +465,7 @@ class Builder(object):
 	
 	def __init__(self, dialect = None):
 		self.terms   = []
+		self.table   = None
 		self.dialect = dialect or Dialect
 	
 	def select(self, *fields):
@@ -477,12 +493,19 @@ class Builder(object):
 			if isinstance(tablelist, Builder):
 				self.terms.append('(' + tablelist.sql() + ')')
 			else:
-				self.terms += Table.parse(tablelist, self.dialect)
+				tables = Table.parse(tablelist, self.dialect)
+				if not self.table: self.table = tables[0]
+				self.terms += tables
 		return self
 	
 	def where(self, conditions):
+		if not conditions:
+			return self
 		self.terms.append('WHERE')
-		self.terms.append(Where(conditions, self.dialect))
+		wherestr = Where(conditions, self.dialect).sql()
+		if wherestr[0] == '(' and wherestr[-1] == ')':
+			wherestr = wherestr[1:-1]
+		self.terms.append(wherestr)
 		return self
 	
 	def having(self, conditions):
@@ -584,10 +607,8 @@ class Builder(object):
 	def join(self, joins):
 		for key, val in joins.items():
 			table = Table.parse(key, self.dialect)[0]
-			jointype = '><'
-			if isinstance(table, Table) and table.join:
-				jointype = table.join
-			self.terms.append(self.dialect.join(jointype))
+			if isinstance(table, Table) and not table.join:
+				table.join = '><'
 			self.terms.append(table)
 			if isinstance(val, dict):
 				pass
@@ -603,10 +624,11 @@ class Builder(object):
 					fieldk.table = table.alias or table.table
 				fieldv = Field.parse(v, self.dialect)[0]
 				newval[fieldk] = fieldv
-			self.terms.append(JoinOn(newval, table, self.dialect))			
+			self.terms.append(JoinOn(newval, table, self.table, self.dialect))
 		return self		
 		
 	def sql(self):
+		self.table = None
 		return ' '.join([
 			t.sql() if isinstance(t, (Table, Field, Where, Function, JoinOn)) else t \
 			for t in self.terms
@@ -614,4 +636,8 @@ class Builder(object):
 		
 	def __str__(self):
 		return self.sql()
+		
+	def clear(self):
+		self.table = None
+		del self.terms[:]
 		

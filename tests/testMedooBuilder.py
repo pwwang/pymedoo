@@ -34,7 +34,7 @@ class TestMedooBuiler(helpers.TestCase):
 		yield Function.a('table.field1, table.field2'), 'A("table"."field1","table"."field2")'
 		yield Function.b('table.field1(field)'), 'B("table"."field1")'
 		yield Function.count('table.field1(field)', alias = 'cnt'), 'COUNT("table"."field1") "cnt"'
-		yield Function.count(Function.distinct(['table.field1', 'table.field2(field)'])), 'COUNT(DISTINCT "table"."field1","table"."field2" "field")'
+		yield Function.count(Function.distinct(['table.field1', 'table.field2(field)'])), 'COUNT(DISTINCT "table"."field1","table"."field2")'
 		yield Function.distinct(Raw('"field"')), 'DISTINCT "field"'
 		
 	def testFunctionSql(self, fn, sql):
@@ -135,7 +135,7 @@ class TestMedooBuiler(helpers.TestCase):
 		yield Builder().select('*').from_('table').order({'field':True}).limit(10), 'SELECT * FROM "table" ORDER BY "field" ASC LIMIT 1,10'
 		yield Builder().create('table', {'id': 'int primary key', 'b': 'text'}), 'CREATE TABLE IF NOT EXISTS "table" ( "b" text, "id" int primary key ) '
 		yield Builder().select([Raw('"field"')]).from_(Raw('"table"')).join({
-			Raw("table2"): { Raw("table2.id"): "table.id" }
+			"table2": { Raw("table2.id"): "table.id" }
 		}).where({
 			Raw("field = 1"): None,
 			Field("id[!]"): 100,
@@ -153,11 +153,13 @@ class TestMedooBuiler(helpers.TestCase):
 			'field': 'asc',
 			Raw("field2 DESC"): None,
 			Field("field3"): False
-		}).limit([10, 100]), 'SELECT "field" FROM "table" JOIN table2 ON table2.id="table"."id" WHERE field < field2 AND field = 1 AND "id" != 100 GROUP BY field1,"field2","field3" HAVING (("table"."field2" LIKE \'%a%\' OR "table"."field2" LIKE \'%b%\') OR "table"."field" > 1) AND (field > field2 OR field LIKE \'%c%\') ORDER BY "field" ASC,"field3" DESC,field2 DESC LIMIT 10,100'
+		}).limit([10, 100]), 'SELECT "field" FROM "table" JOIN "table2" ON table2.id="table"."id" WHERE field < field2 AND field = 1 AND "id" != 100 GROUP BY field1,"field2","field3" HAVING (("table"."field2" LIKE \'%a%\' OR "table"."field2" LIKE \'%b%\') OR "table"."field" > 1) AND (field > field2 OR field LIKE \'%c%\') ORDER BY "field" ASC,"field3" DESC,field2 DESC LIMIT 10,100'
 		yield Builder().select('*').from_('table1(t)').join({
 			'table3': 'id'
 		}).where({'t.id[>]':100, 'table3.id[<]': 100}), 'SELECT * FROM "table1" "t" JOIN "table3" ON "table3"."id"="id" WHERE "t"."id" > 100 AND "table3"."id" < 100'
 		yield Builder().select().from_(Builder().select().from_('table')), 'SELECT * FROM (SELECT * FROM "table")'
+		yield Builder().select(Function.count()).from_('table').where({'id[>]':100}), 'SELECT COUNT(*) FROM "table" WHERE "id" > 100'
+		yield Builder().update('table').set({'field[json]': {'a':1, 'b':2}}).where({'a': (1,2,3)}), 'UPDATE "table" SET "field"=\'{"a": 1, "b": 2}\' WHERE "a" IN (1,2,3)'
 		
 	def testBuilder(self, builder, sql):
 		self.assertEqual(builder.sql(), sql)

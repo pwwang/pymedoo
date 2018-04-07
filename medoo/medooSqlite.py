@@ -1,27 +1,20 @@
 import sqlite3
-from pypika import Table
-from .medooBase import MedooBase, MedooRecords
+from .medooBuilder import Dialect, Table, Builder
+from .medooBase import MedooBase, Box
 
-class MedooSqliteRecord(dict):
+class DialectSqlite(Dialect):
 	
-	def __init__(self, record):
-		for key in record.keys():
-			self[key] = record[key]
-			
-	def __getattr__(self, key):
-		return self[key]
-		
-	def __setattr__(self, key, val):
-		self[key] = val
+	pass
 
 class MedooSqlite(MedooBase):
 
 	def __init__(self, *args, **kwargs):
 		super(MedooSqlite, self).__init__(*args, **kwargs)
-		self.connection.row_factory = lambda cursor, row: MedooSqliteRecord({
+		self.connection.row_factory = lambda cursor, row: Box({
 			k[0]:row[i] for i, k in enumerate(cursor.description)
 		})
 		self.cursor = self.connection.cursor()
+		self.sql    = Builder(dialect = DialectSqlite)
 	
 	def _connect(self, *args, **kwargs):
 		arguments = {
@@ -38,22 +31,17 @@ class MedooSqlite(MedooBase):
 		del arguments['database_file']
 		return sqlite3.connect(**arguments)
 		
-	def tableExists(self, table, schema = None):
-		return self.has('sqlite_master', None, 'name', {'type': 'table', 'name': table}, schema)
+	def tableExists(self, table):
+		return self.has('sqlite_master', 'name', {'type': 'table', 'name': table})
 		
-	def dropTable(self, table, commit = True, schema = None):
-		table = Table(table, schema = schema)
+	def drop(self, table, commit = True):
+		table = Table(table)
 		return self.query('DROP TABLE IF EXISTS %s' % table, commit)
 
-	def createTable(self, table, fields, drop = True, suffix = '', commit = True, schema = None):
-		if drop and self.tableExists(table):
-			self.dropTable(table, schema)
-		
-		table = Table(table, schema = schema)
-		fieldstr = ', '.join([
-			'"%s" %s' % (k, v) for k,v in fields.items()
-		])
-		sql = 'CREATE TABLE IF NOT EXISTS %s (%s) %s' % (table, fieldstr, suffix)
+	def create(self, table, fields, ifnotexists = True, suffix = '', commit = True):
+		self.sql.create(table, fields, ifnotexists, suffix)
+		sql = self.sql.sql()
+		self.sql.clear()
 		return self.query(sql, commit)
 		
 		

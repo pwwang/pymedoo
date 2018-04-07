@@ -1,6 +1,6 @@
 import helpers, unittest, sqlite3
-from medoo.medooSqlite import MedooSqliteRecord, MedooSqlite
-from medoo import MedooTableParseError, MedooFieldParseError, Field
+from medoo.medooSqlite import MedooSqlite
+from medoo import Field, Function
 
 class TestMedooSqliteRecord(helpers.TestCase):
 	
@@ -46,21 +46,21 @@ class TestMedooSqlite(helpers.TestCase):
 		m.cursor.execute('insert into "table2" values(5, \'d5\', 2)')
 		m.cursor.execute('insert into "table2" values(6, \'d6\', 6)')
 		m.connection.commit()
-		yield m, '[<>]table1', None, '*', None, None, MedooTableParseError
+		#yield m, '[<>]table1', None, '*', None, None, ValueError
 		yield m, 'table1', None, ['a'], {'b': 'b1'}, {"a": 1}
 		yield m, 'table2', None, '*', {'d[~]': 'd%', 'd[!]': 'd1'}, {"c": 2, "d": "d2", "e": 4}
 		yield m, 'table1(t1)', None, 't1.b', {'t1.a': 5}, {"b": "b5"}
 		yield m, 'table1(t1)', None, 't1.b(x)', {'t1.a': 5}, {"x": "b5"}
-		yield m, 'table1(t1)', {'[><]table2(t2)': {'a': 'c'}}, 't2.d(y)', {'t1.a': 6}, {"y": "d6"}
-		yield m, 'table1(t1)', {'table2(t2)': {'a': 'c'}}, 't2.d(y)', {'t1.a[>]':Field('t2.e')}, {"y": "d3"}
-		yield m, 'table1(t1)', {'table2(t2)': {'a': 'c'}}, 't2.d(y)', {'t1.a[>]':Field('t2.e') + 2}, {"y": "d5"}
+		yield m, 'table1(t1)', {'[><]table2(t2)': {'c': 'a'}}, 't2.d(y)', {'t1.a': 6}, {"y": "d6"}
+		yield m, 'table1(t1)', {'table2(t2)': {'c': 'a'}}, 't2.d(y)', {'t1.a[>]':Field('t2.e')}, {"y": "d3"}
+		yield m, 'table1(t1)', {'table2(t2)': {'c': 'a'}}, 't2.d(y)', {'t1.a[>]':Field('t2.e') + 2}, {"y": "d5"}
 	
 	def testSelect(self, m, table, join, columns, where, record, exception = None):
 		if exception:
-			self.assertRaises(exception, m.select, table, join, columns, where)
+			self.assertRaises(exception, m.select, table, columns, where, join = join)
 		else:
-			rs = m.select(table, join, columns, where)
-			r  = next(rs)
+			rs = m.select(table, columns, where, join = join)
+			r = rs.fetchone()
 			self.assertDictEqual(r, record)
 			for k, v in record.items():
 				self.assertEqual(getattr(r, k), v)
@@ -69,9 +69,9 @@ class TestMedooSqlite(helpers.TestCase):
 		m = MedooSqlite()
 		m.cursor.execute('create table "table" ("a" text, "b" text)')
 		m.connection.commit()
-		yield m, "[><]table", ["t1.a", "b"], [("a1", "b1")], True, MedooFieldParseError
-		yield m, "table", ["t1.a", "b"], [("a1", "b1")], True, MedooFieldParseError
-		yield m, "table", ["a(x)", "b"], [("a1", "b1")], True, MedooFieldParseError
+		#yield m, "[><]table", ["t1.a", "b"], [("a1", "b1")], True, ValueError
+		#yield m, "table", ["t1.a", "b"], [("a1", "b1")], True, ValueError
+		#yield m, "table", ["a(x)", "b"], [("a1", "b1")], True, ValueError
 		yield m, "table", ["table.a", "b"], [("a1", "b1"), ("a2", "b2")], True
 			
 	def testInsert(self, m, table, columns, datas, commit, exception = None):
@@ -81,8 +81,8 @@ class TestMedooSqlite(helpers.TestCase):
 			self.assertRaises(exception, m.insert, table, data, *datas, commit = commit)
 		else:
 			m.insert(table, data, *datas, commit = commit)
-			rs = m.select(table, None, columns)
-			for i, r in enumerate(rs):
+			rs = m.select(table, columns)
+			for i, r in enumerate(rs.fetchall()):
 				if i == 0:
 					self.assertDictEqual(r, data)
 				else:
@@ -104,8 +104,8 @@ class TestMedooSqlite(helpers.TestCase):
 	def testUpdate(self, m, table, data, where, outdata = None, commit = True):
 		outdata = outdata or data
 		m.update(table, data, where, commit)
-		rs = m.select(table, None, outdata.keys(), where)
-		r = next(rs)
+		rs = m.select(table, outdata.keys(), where)
+		r = rs.fetchone()
 		for key, val in (outdata or data).items():
 			self.assertEqual(getattr(r, key), val)
 			
@@ -124,8 +124,7 @@ class TestMedooSqlite(helpers.TestCase):
 	def testDelete(self, m, table, where, commit = True):
 		m.delete(table, where)
 		rs = m.select(table, columns = '*', where = where)
-		r = next(rs)
-		self.assertIsNone(r)
+		self.assertIsNone(rs.fetchone())
 		
 	def dataProvider_testHas(self):
 		m = MedooSqlite()
@@ -137,11 +136,11 @@ class TestMedooSqlite(helpers.TestCase):
 		m.cursor.execute('insert into "table" values(\'a5\', 5)')
 		m.cursor.execute('insert into "table" values(\'a6\', 6)')
 		m.connection.commit()
-		yield m, "table", None, 'a', {'a': 'a1'}, True
-		yield m, "table", None, 'a', {'a': 'a8'}, False
+		yield m, "table", 'a', {'a': 'a1'}, True
+		yield m, "table", 'a', {'a': 'a8'}, False
 		
-	def testHas(self, m, table, join, columns, where, ret):
-		r = m.has(table, join, columns, where)
+	def testHas(self, m, table, columns, where, ret):
+		r = m.has(table, columns, where)
 		self.assertEqual(r, ret)
 		
 	def dataProvider_testCount(self):
@@ -155,13 +154,12 @@ class TestMedooSqlite(helpers.TestCase):
 		m.cursor.execute('insert into "table" values(\'a6\', 6)')
 		m.cursor.execute('insert into "table" values(\'a6\', 6)')
 		m.connection.commit()
-		yield m, "table", None, '*(c)', None, False, 7
-		yield m, "table", None, 'a(c)', None, True, 6
+		yield m, "table", Function.count('*(c)', alias = 'c'), None, 7
+		yield m, "table", Function.count(Function.distinct('a(c)'), alias = 'c'), None, 6
 	
-	def testCount(self, m, table, join, columns, where, distinct, ret):
-		r = m.count(table, join, columns, where, distinct)
-		rs = m.query('SELECT COUNT(DISTINCT "a") "c" FROM "table"')
-		self.assertEqual(r.c, ret)
+	def testCount(self, m, table, columns, where, ret):
+		r = m.select(table, columns, where)
+		self.assertEqual(r.fetchone().c, ret)
 		
 	def dataProvider_testTableExists(self):
 		m = MedooSqlite()
@@ -185,7 +183,7 @@ class TestMedooSqlite(helpers.TestCase):
 		yield m, "table2"
 	
 	def testDropTable(self, m, table):
-		m.dropTable(table)
+		m.drop(table)
 		self.assertFalse(m.tableExists(table))
 		
 	def dataProvider_testCreateTable(self):
@@ -194,9 +192,10 @@ class TestMedooSqlite(helpers.TestCase):
 		m.connection.commit()
 		yield m, "table1", {"a": "text", "c": "int"}, False
 		
-	def testCreateTable(self, m, table, schema, drop = True, suffix = ''):
-		r = m.createTable(table, schema, drop, suffix)
-		if not drop:
+	def testCreateTable(self, m, table, schema, ifnotexists = True, suffix = ''):
+		m.drop(table)
+		r = m.create(table, schema, ifnotexists, suffix)
+		if not ifnotexists:
 			m.insert(table, {'a':1, 'b':2})
 			self.assertIs(r, True)
 		else:
