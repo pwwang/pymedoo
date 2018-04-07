@@ -141,7 +141,7 @@ class MedooParser(object):
 		if operation == '<>':
 			return field[val[0]:val[1]]
 		if operation == '><':
-			return (not field[val[0]:val[1]])
+			return field[val[0]:val[1]].negate()
 		if operation == '~':
 			if isinstance(val, list):
 				val = list(set(val))
@@ -236,6 +236,7 @@ class MedooParser(object):
 			raise MedooFieldParseError('No operation allowed for field in JOIN clause: "%s"' % field2)
 		tname1 = tname1 or table1
 		tname2 = tname2 or table2
+		#print tname1, tname2
 		f1 = PkField(fname1, table = tname1, alias = alias1)
 		f2 = PkField(fname2, table = tname2, alias = alias2)
 		return (f1 == f2)
@@ -383,19 +384,74 @@ class MedooBase(object):
 		q = Query.from_(table)
 			
 		if join:
+			def findKeys(dictionary, value):
+				ret = []
+				value = str(value)
+				for key, val in dictionary.items():
+					if str(val) != value: continue
+					ret.append(key)
+				return ret
+				
+			# sort join items, since pypika check the tables that not appear before on
+			sorts   = {}
+			jtables = {}
+			jsigns  = {}
+			minv    = -1
+			maxv    = 999
 			for key, val in join.items():
 				jsign, tname, alias = MedooParser.table(key)
+				jsigns[key] = jsign or JoinType.inner
 				jtable = Table(tname, alias = alias, schema = schema)
 				tables[tname] = jtable
 				if alias: tables[alias] = jtable
-				q = q.join(jtable, how = jsign or JoinType.inner)
+				jtables[key] = jtable
+				sorts[key] = 500
+				if isinstance(val, dict):
+					pass
+				elif isinstance(val, (tuple, list)):
+					join[key] = {v:v for v in val}
+				else:
+					join[key] = {val:val}
+					
+			for key, val in join.items():
+				deptables = set()
+				for k, v in val.items():
+					t1, field1, _, _ = MedooParser.field(k)
+					t2, field2, _, _ = MedooParser.field(v)
+					# not depending on any other tables
+					if t1: deptables.add(t1)
+					if t2: deptables.add(t2)
+				thisjointables = set([str(table), str(jtables[key])])
+				if not deptables:
+					sorts[key] = minv
+				else:
+					otherdeptables = deptables - thisjointables
+					if not otherdeptables:
+						sorts[key] = minv
+					else:
+						for odtable in otherdeptables:
+							keys = findKeys(jtables, odtable)
+							sorts[key] = max([sorts[k] for k in keys] + [sorts[key]]) + 1
+			
+			print sorts
+			for key in sorted(join.keys(), key = lambda x: sorts[x]):
+				print 'KEY:', key
+				val = join[key]
+				q = q.join(jtables[key], how = jsigns[key])
+				print 'JOINTABLE:', jtables[key]
+				print 'JOINFIELDS:', val
 				field1, field2 = val.items()[0]
-				del val[field1]				
-				joinon = MedooParser.joinOn(field1, field2, table, jtable)
+				del val[field1]	
+				joinon = MedooParser.joinOn(field1, field2, jtable, table)
 				for field1, field2 in val.items():
-					joinon &= MedooParser.joinOn(field1, field2, table, jtable)
-				q = q.on(joinon)									
-		
+					joinon &= MedooParser.joinOn(field1, field2, jtable, table)
+				print 'JOINON:', str(joinon)
+				try:
+					q = q.on(joinon)
+				except:
+					print 'RAISE:', key, val
+					raise
+
 		fields = []
 		for c in MedooParser.alwaysList(columns):
 			tname, field, alias, operation = MedooParser.field(c)
