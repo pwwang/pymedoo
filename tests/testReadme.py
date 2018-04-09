@@ -118,7 +118,7 @@ class TestReadme(helpers.TestCase):
 				},
 				"password":  "12345"
 			}
-		}, 'SELECT * FROM "account" WHERE "password" = \'12345\' AND ("user_name" = \'foo\' OR "email" = \'foo@bar.com\')'
+		}, 'SELECT * FROM "account" WHERE "password" = \'12345\' AND ("user_name" = \'foo\' OR "email" = \'foo@bar.com\')', False
 		yield m, "account", "*", {
 			"AND #Actually, this comment feature can be used on every AND and OR relativity condition":  {
 				"OR #the first condition":  {
@@ -130,14 +130,14 @@ class TestReadme(helpers.TestCase):
 					"email":  "bar@foo.com"
 				}
 			}
-		}, 'SELECT * FROM "account" WHERE ("user_name" = \'bar\' OR "email" = \'bar@foo.com\') AND ("user_name" = \'foo\' OR "email" = \'foo@bar.com\')'
+		}, 'SELECT * FROM "account" WHERE ("user_name" = \'bar\' OR "email" = \'bar@foo.com\') AND ("user_name" = \'foo\' OR "email" = \'foo@bar.com\')', False
 		yield m, "post", ["post.id", "post.content"], {
 			"AND":  {
 				"post.restrict[<]": Field("account.age") + 1,				
 				"account.user_name":  "foo",
 				"account.email":  "foo@bar.com",
 			}
-		}, 'SELECT "post"."id","post"."content" FROM "post" LEFT JOIN "account" ON "account"."user_id"="post"."author_id" WHERE "account"."user_name" = \'foo\' AND "post"."restrict" < "account"."age"+1 AND "account"."email" = \'foo@bar.com\'', True, {
+		}, 'SELECT "post"."id","post"."content" FROM "post" LEFT JOIN "account" ON "account"."user_id"="post"."author_id" WHERE "account"."user_name" = \'foo\' AND "post"."restrict" < "account"."age"+1 AND "account"."email" = \'foo@bar.com\'', False, {
 			"[>]account":  {"user_id": "author_id"},
 		}
 		yield m, "person", "id", {"city[~]": ["lon", "foo", "bar"]}, 'SELECT "id" FROM "person" WHERE "city" LIKE \'%lon%\' OR "city" LIKE \'%foo%\' OR "city" LIKE \'%bar%\''
@@ -156,7 +156,7 @@ class TestReadme(helpers.TestCase):
 			"post.user_id":  100,
 			"ORDER":  {"post.post_id":  "DESC"},
 			"LIMIT":  50
-		}, 'SELECT "post"."post_id","post"."title","account"."user_id","account"."city","replyer"."user_id","replyer"."city" FROM "post" LEFT JOIN "account4" ON "account4"."author_id"="post"."user_id" AND "album"."user_id"="post"."user_id" LEFT JOIN "album2" ON "account"."user_id"="post"."user_id" LEFT JOIN "account2" "replyer" ON "replyer"."replyer_id"="post"."user_id" LEFT JOIN "account3" ON "account3"."author_id"="post"."user_id" LEFT JOIN "photo" USING ("user_id","avatar_id") LEFT JOIN "album" USING ("user_id") LEFT JOIN "account" ON "account"."author_id"="post"."user_id" WHERE "post"."user_id" = 100 ORDER BY "post"."post_id" DESC LIMIT 1,50', True, {
+		}, 'SELECT "post"."post_id","post"."title","account"."user_id","account"."city","replyer"."user_id","replyer"."city" FROM "post" LEFT JOIN "account4" ON "account4"."author_id"="post"."user_id" AND "album"."user_id"="post"."user_id" LEFT JOIN "album2" ON "account"."user_id"="post"."user_id" LEFT JOIN "account2" "replyer" ON "replyer"."replyer_id"="post"."user_id" LEFT JOIN "account3" ON "account3"."author_id"="post"."user_id" LEFT JOIN "photo" USING ("user_id","avatar_id") LEFT JOIN "album" USING ("user_id") LEFT JOIN "account" ON "account"."author_id"="post"."user_id" WHERE "post"."user_id" = 100 ORDER BY "post"."post_id" DESC LIMIT 1,50', False, {
 			"[>]account":  {"author_id":  "user_id"},
 			"[>]album":  "user_id",
 			"[>]photo":  ["user_id", "avatar_id"],
@@ -179,7 +179,7 @@ class TestReadme(helpers.TestCase):
 		if exact:
 			self.assertEqual(rsql, sql)
 		else:
-			self.assertItemsEqual(list(rsql), list(sql))
+			self.assertItemEqual(list(rsql), list(sql))
 	
 			
 	def dataProvider_testInsert(self):
@@ -202,11 +202,14 @@ class TestReadme(helpers.TestCase):
 			"email":  "bar@foo.com",
 			"age":  33,
 			"lang[json]":  ["jp", "cn"] #:  '["jp", "cn"]'
-		}], """INSERT INTO "account" ("lang","age","user_name","email") VALUES ('[''en'', ''fr'']',25,'foo','foo@bar.com'), ('[''jp'', ''cn'']',33,'bar','bar@foo.com')"""
+		}], """INSERT INTO "account" ("lang","age","user_name","email") VALUES ('[''en'', ''fr'']',25,'foo','foo@bar.com'), ('[''jp'', ''cn'']',33,'bar','bar@foo.com')""", False
 			
-	def testInsert(self, m, table, data, datas, sql):
+	def testInsert(self, m, table, data, datas, sql, exact = True):
 		m.insert(table, data, *datas)
-		self.assertEqual(m.last(), sql)
+		if exact:
+			self.assertEqual(m.last(), sql)
+		else:
+			self.assertItemEqual(list(m.last()), list(sql))
 	
 	def dataProvider_testUpdate(self):
 		m = Medoo(database_type = 'sqlite', database_file = ':memory:')
@@ -225,11 +228,14 @@ class TestReadme(helpers.TestCase):
 			"level[-]": 5,
 			"score[*]": 2,
 			"lang": ["en", "fr", "jp", "cn"]
-		}, {'user_id[<]': 1000}, """UPDATE "account" SET "lang"='[''en'', ''fr'', ''jp'', ''cn'']\',"age"="age"+1,"level"="level"-5,"type"='user',"score"="score"*2 WHERE "user_id" < 1000"""
+		}, {'user_id[<]': 1000}, """UPDATE "account" SET "lang"='[''en'', ''fr'', ''jp'', ''cn'']\',"age"="age"+1,"level"="level"-5,"type"='user',"score"="score"*2 WHERE "user_id" < 1000""", False
 	
-	def testUpdate(self, m, table, data, where, sql):
+	def testUpdate(self, m, table, data, where, sql, exact):
 		m.update(table, data, where)
-		self.assertEqual(m.last(), sql)
+		if exact:
+			self.assertEqual(m.last(), sql)
+		else:
+			self.assertItemEqual(list(m.last()), list(sql))
 		
 if __name__ == '__main__':
 	unittest.main(verbosity = 2)

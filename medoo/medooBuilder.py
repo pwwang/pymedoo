@@ -1,8 +1,10 @@
-import re
+import re, six, types, collections
 
 def _alwaysList(s):
 	if isinstance(s, list):
 		return s
+	if isinstance(s, (types.GeneratorType, collections.KeysView)):
+		return list(s)
 	return [x.strip() for x in s.split(',') if x.strip()]
 
 class TableParseError(Exception):
@@ -36,9 +38,7 @@ class MetaFuncion(type):
 	def __getattr__(klass, name):
 		return lambda *fields, **kwargs: Function(name, *fields, **kwargs)
 	
-class Function(Term):
-	
-	__metaclass__ = MetaFuncion
+class Function(six.with_metaclass(MetaFuncion, Term)):
 	
 	def __init__(self, fn, *fields, **kwargs):
 		self.fn      = fn
@@ -89,7 +89,7 @@ class MetaDialect(type):
 			return '%s(%s)%s' % (name.upper(), ','.join([Field.stringify(field, False) for field in fields]), operator)
 		return func
 
-class Dialect(object):
+class Dialect(six.with_metaclass(MetaDialect)):
 
 	__metaclass__ = MetaDialect
 	
@@ -103,9 +103,9 @@ class Dialect(object):
 		
 	@staticmethod
 	def value(item):
-		if isinstance(item, (int, float, long)):
+		if isinstance(item, six.integer_types + (float, )):
 			return str(item)
-		elif isinstance(item, (Raw, Field)):
+		elif isinstance(item, Term):
 			return item.sql()
 		else:
 			return "'{}'".format(str(item).replace("'", "''"))
@@ -330,7 +330,7 @@ class Field(Term):
 		dialect = dialect or Dialect
 		if isinstance(fieldlist, (tuple, list)):
 			return [field for sublist in [Field.parse(fieldstr) for fieldstr in fieldlist] for field in sublist]
-		if isinstance(fieldlist, (Field, Raw, Function)):
+		if isinstance(fieldlist, Term):
 			return [fieldlist]
 		else:
 			return [Field(fieldstr, dialect) for fieldstr in _alwaysList(fieldlist)]

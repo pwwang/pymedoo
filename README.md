@@ -1,7 +1,10 @@
 # pymedoo
 A lightweight database framework for python inspired by [Medoo][1].  
-Focus more on data!  
-Note: currently only sqlite is supported.
+NOTE: currently only sqlite is supported.
+
+- API Focuses more on data.
+- It Works with both python2 and python3.
+- It is flexiable and extendable
 
 ## Install
 ```bash

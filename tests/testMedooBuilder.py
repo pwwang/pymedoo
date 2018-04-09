@@ -27,7 +27,7 @@ class TestMedooBuiler(helpers.TestCase):
 		yield Function('a', []),
 	
 	def testFunctionHash(self, fn):
-		f = {fn:1}.keys()[0]
+		f = list({fn:1}.keys())[0]
 		self.assertIsInstance(f, Function)
 		
 	def dataProvider_testFunctionSql(self):
@@ -124,18 +124,18 @@ class TestMedooBuiler(helpers.TestCase):
 			},
 			'f1': Field('f2') + 1,
 			Function.max('f2[>]'): 1000
-		}), 'SELECT "a",* FROM "table" WHERE "f1" = "f2"+1 AND MAX("f2")>1000 AND ("f2" BETWEEN 10 AND 20 OR "f1" IN (1,2,3) OR ("f3" NOT LIKE \'%a%\' AND "f3" NOT LIKE \'%b%\'))'
+		}), 'SELECT "a",* FROM "table" WHERE "f1" = "f2"+1 AND MAX("f2")>1000 AND ("f2" BETWEEN 10 AND 20 OR "f1" IN (1,2,3) OR ("f3" NOT LIKE \'%a%\' AND "f3" NOT LIKE \'%b%\'))', False
 		yield Builder().update('table').set({
 			'field': 1,
 			'field1[+]': 2,
 			'field2[/]': 3,
 			'field3': Function.max('field2') + 4,
 			'field4': Field('field2') + 5
-		}).where({'id[=]': 100}), 'UPDATE "table" SET "field2"="field2"/3,"field"=1,"field3"=MAX("field2")+4,"field4"="field2"+5,"field1"="field1"+2 WHERE "id" = 100'
+		}).where({'id[=]': 100}), 'UPDATE "table" SET "field2"="field2"/3,"field"=1,"field3"=MAX("field2")+4,"field4"="field2"+5,"field1"="field1"+2 WHERE "id" = 100', False
 		yield Builder().insert('table', 'a,b,c').values((1,2,3), (4,5,6)), 'INSERT INTO "table" ("a","b","c") VALUES (1,2,3), (4,5,6)'
 		yield Builder().select('*').from_('table').order({'field':True}).limit(10), 'SELECT * FROM "table" ORDER BY "field" ASC LIMIT 1,10'
 		# 5
-		yield Builder().create('table', {'id': 'int primary key', 'b': 'text'}), 'CREATE TABLE IF NOT EXISTS "table" ( "b" text, "id" int primary key ) '
+		yield Builder().create('table', {'id': 'int primary key', 'b': 'text'}), 'CREATE TABLE IF NOT EXISTS "table" ( "b" text, "id" int primary key ) ', False
 		yield Builder().select([Raw('"field"')]).from_(Raw('"table"')).join({
 			"table2": { Raw("table2.id"): "table.id" }
 		}).where({
@@ -155,7 +155,7 @@ class TestMedooBuiler(helpers.TestCase):
 			'field': 'asc',
 			Raw("field2 DESC"): None,
 			Field("field3"): False
-		}).limit([10, 100]), 'SELECT "field" FROM "table" JOIN "table2" ON table2.id="table"."id" WHERE field < field2 AND field = 1 AND "id" != 100 GROUP BY field1,"field2","field3" HAVING (("table"."field2" LIKE \'%a%\' OR "table"."field2" LIKE \'%b%\') OR "table"."field" > 1) AND (field > field2 OR field LIKE \'%c%\') ORDER BY "field" ASC,"field3" DESC,field2 DESC LIMIT 10,100'
+		}).limit([10, 100]), 'SELECT "field" FROM "table" JOIN "table2" ON table2.id="table"."id" WHERE field < field2 AND field = 1 AND "id" != 100 GROUP BY field1,"field2","field3" HAVING (("table"."field2" LIKE \'%a%\' OR "table"."field2" LIKE \'%b%\') OR "table"."field" > 1) AND (field > field2 OR field LIKE \'%c%\') ORDER BY "field" ASC,"field3" DESC,field2 DESC LIMIT 10,100', False
 		yield Builder().select('*').from_('table1(t)').join({
 			'table3': 'id'
 		}).where({'t.id[>]':100, 'table3.id[<]': 100}), 'SELECT * FROM "table1" "t" JOIN "table3" USING ("id") WHERE "t"."id" > 100 AND "table3"."id" < 100'
@@ -163,8 +163,11 @@ class TestMedooBuiler(helpers.TestCase):
 		yield Builder().select(Function.count()).from_('table').where({'id[>]':100}), 'SELECT COUNT(*) FROM "table" WHERE "id" > 100'
 		yield Builder().update('table').set({'field[json]': {'a':1, 'b':2}}).where({'a': (1,2,3)}), 'UPDATE "table" SET "field"=\'{"a": 1, "b": 2}\' WHERE "a" IN (1,2,3)'
 		
-	def testBuilder(self, builder, sql):
-		self.assertEqual(builder.sql(), sql)
+	def testBuilder(self, builder, sql, exact = True):
+		if exact:
+			self.assertEqual(builder.sql(), sql)
+		else:
+			self.assertItemEqual(list(builder.sql()), list(sql))
 
 if __name__ == '__main__':
 	unittest.main(verbosity = 2)

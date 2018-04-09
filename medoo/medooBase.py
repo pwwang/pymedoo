@@ -66,7 +66,7 @@ class MedooBase(object):
 		
 		values = []
 		if isinstance(data, dict):
-			self.sql.insert(table, data.keys())
+			self.sql.insert(table, *data.keys())
 			values.append(data.values())
 		else:
 			self.sql.insert(table)
