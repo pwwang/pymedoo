@@ -1,5 +1,5 @@
 import helpers, unittest, sqlite3
-from medoo import Medoo, Field, Raw, MedooSqlite
+from medoo import Medoo, Field, Raw, MedooSqlite, Box, Function
 
 class TestReadme(helpers.TestCase):
 	
@@ -11,16 +11,85 @@ class TestReadme(helpers.TestCase):
 		self.assertIsInstance(m, MedooSqlite)
 		
 	def dataProvider_testWhereSelect(self):
+		m = Medoo(database_type = 'sqlite', database_file = ':memory:')
+		m.create("account", {
+			"user_id": 'int',
+			"author_id": 'int',
+			"user_name": "text",
+			"email": "text",
+			"age": "int",
+			"promoted": "int",
+			"gener": "text",
+			"password": "text",
+			"city": "text",
+			"logontime": "text"
+		})
+		m.create("account2", {
+			"replyer_id": 'int',
+			"user_id": 'int',
+			"user_name": "text",
+			"email": "text",
+			"age": "int",
+			"promoted": "int",
+			"gener": "text",
+			"password": "text",
+			"city": "text"
+		})
+		m.create("account3", {
+			"user_id": 'int',
+			"author_id": 'int',
+			"user_name": "text",
+			"email": "text",
+			"age": "int",
+			"promoted": "int",
+			"gener": "text",
+			"password": "text",
+		})
+		m.create("account4", {
+			"author_id": 'int',
+			"user_id": 'int',
+			"user_name": "text",
+			"email": "text",
+			"age": "int",
+			"promoted": "int",
+			"gener": "text",
+			"password": "text",
+		})
+		m.create("post", {
+			"id": "int",
+			"user_id": "int",
+			"author_id": "int",
+			"post_id": "int",
+			"title": "text",
+			"content": "text",
+			"restrict": "int",
+			"avatar_id": "int",
+		})
+		m.create("album", {
+			"user_id": "int",
+		})
+		m.create("album2", {
+			"user_id": "int",
+		})
+		
+		m.create("photo", {
+			"user_id": "int",
+			"avatar_id": "int",
+		})
+		m.create("person", {
+			"id": "int",
+			"city": "text",
+		})
 		# 0
-		yield "account", "user_name", {"email": "foo@bar.com"}, 'SELECT "user_name" FROM "account" WHERE "email" = \'foo@bar.com\''
-		yield "account", "user_name", {"user_id": 200}, 'SELECT "user_name" FROM "account" WHERE "user_id" = 200'
-		yield "account", "user_name", {"user_id[>]": 200}, 'SELECT "user_name" FROM "account" WHERE "user_id" > 200'
-		yield "account", "user_name", {"user_id[>=]": 200}, 'SELECT "user_name" FROM "account" WHERE "user_id" >= 200'
-		yield "account", "user_name", {"user_id[!]": 200}, 'SELECT "user_name" FROM "account" WHERE "user_id" != 200'
+		yield m, "account", "user_name", {"email": "foo@bar.com"}, 'SELECT "user_name" FROM "account" WHERE "email" = \'foo@bar.com\''
+		yield m, "account", "user_name", {"user_id": 200}, 'SELECT "user_name" FROM "account" WHERE "user_id" = 200'
+		yield m, "account", "user_name", {"user_id[>]": 200}, 'SELECT "user_name" FROM "account" WHERE "user_id" > 200'
+		yield m, "account", "user_name", {"user_id[>=]": 200}, 'SELECT "user_name" FROM "account" WHERE "user_id" >= 200'
+		yield m, "account", "user_name", {"user_id[!]": 200}, 'SELECT "user_name" FROM "account" WHERE "user_id" != 200'
 		# 5
-		yield "account", "user_name", {"age[<>]": (200, 500)}, 'SELECT "user_name" FROM "account" WHERE "age" BETWEEN 200 AND 500'
-		yield "account", "user_name", {"age[><]": (200, 500)}, 'SELECT "user_name" FROM "account" WHERE "age" NOT BETWEEN 200 AND 500'
-		yield "account", "user_name", {
+		yield m, "account", "user_name", {"age[<>]": (200, 500)}, 'SELECT "user_name" FROM "account" WHERE "age" BETWEEN 200 AND 500'
+		yield m, "account", "user_name", {"age[><]": (200, 500)}, 'SELECT "user_name" FROM "account" WHERE "age" NOT BETWEEN 200 AND 500'
+		yield m, "account", "user_name", {
 			"AND":  {
 				"user_name[!]":  "foo",
 				"user_id[!]":  1024,
@@ -28,12 +97,12 @@ class TestReadme(helpers.TestCase):
 				"promoted[!]":  1
 			}
 		}, 'SELECT "user_name" FROM "account" WHERE "user_id" != 1024 AND "promoted" != 1 AND "email" NOT IN (\'foo@bar.com\',\'cat@dog.com\',\'admin@medoo.in\') AND "user_name" != \'foo\'', False
-		yield "account", "user_name", {
+		yield m, "account", "user_name", {
 			"user_id[>]":  200,
 			"age[<>]":  [18, 25],
 			"gender":  "female"
 		}, 'SELECT "user_name" FROM "account" WHERE "user_id" > 200 AND "age" BETWEEN 18 AND 25 AND "gender" = \'female\'', False
-		yield "account", "user_name", {
+		yield m, "account", "user_name", {
 			"OR":  {
 				"user_id[>]":  200,
 				"age[<>]":  [18, 25],
@@ -41,7 +110,7 @@ class TestReadme(helpers.TestCase):
 			}
 		}, 'SELECT "user_name" FROM "account" WHERE "user_id" > 200 OR "age" BETWEEN 18 AND 25 OR "gender" = \'female\'', False
 		# 10
-		yield "account", "*", {
+		yield m, "account", "*", {
 			"AND":  {
 				"OR":  {
 					"user_name":  "foo",
@@ -50,7 +119,7 @@ class TestReadme(helpers.TestCase):
 				"password":  "12345"
 			}
 		}, 'SELECT * FROM "account" WHERE "password" = \'12345\' AND ("user_name" = \'foo\' OR "email" = \'foo@bar.com\')'
-		yield "account", "*", {
+		yield m, "account", "*", {
 			"AND #Actually, this comment feature can be used on every AND and OR relativity condition":  {
 				"OR #the first condition":  {
 					"user_name":  "foo",
@@ -62,21 +131,21 @@ class TestReadme(helpers.TestCase):
 				}
 			}
 		}, 'SELECT * FROM "account" WHERE ("user_name" = \'bar\' OR "email" = \'bar@foo.com\') AND ("user_name" = \'foo\' OR "email" = \'foo@bar.com\')'
-		yield "post", ["post.id", "post.content"], {
+		yield m, "post", ["post.id", "post.content"], {
 			"AND":  {
-				"post.restrict[<]": Field("account.age"),				
+				"post.restrict[<]": Field("account.age") + 1,				
 				"account.user_name":  "foo",
 				"account.email":  "foo@bar.com",
 			}
-		}, 'SELECT "post"."id","post"."content" FROM "post" LEFT JOIN "account" ON "account"."user_id"="post"."author_id" WHERE "account"."user_name" = \'foo\' AND "post"."restrict" < "account"."age" AND "account"."email" = \'foo@bar.com\'', True, {
+		}, 'SELECT "post"."id","post"."content" FROM "post" LEFT JOIN "account" ON "account"."user_id"="post"."author_id" WHERE "account"."user_name" = \'foo\' AND "post"."restrict" < "account"."age"+1 AND "account"."email" = \'foo@bar.com\'', True, {
 			"[>]account":  {"user_id": "author_id"},
 		}
-		yield "person", "id", {"city[~]": ["lon", "foo", "bar"]}, 'SELECT "id" FROM "person" WHERE "city" LIKE \'%lon%\' OR "city" LIKE \'%foo%\' OR "city" LIKE \'%bar%\''
-		yield "person", "id", {"city[!~]": "lon"}, 'SELECT "id" FROM "person" WHERE "city" NOT LIKE \'%lon%\''
+		yield m, "person", "id", {"city[~]": ["lon", "foo", "bar"]}, 'SELECT "id" FROM "person" WHERE "city" LIKE \'%lon%\' OR "city" LIKE \'%foo%\' OR "city" LIKE \'%bar%\''
+		yield m, "person", "id", {"city[!~]": "lon"}, 'SELECT "id" FROM "person" WHERE "city" NOT LIKE \'%lon%\''
 		# 15
-		yield "person", "id", {"city[!~]": ["lon", "foo", "bar"]}, 'SELECT "id" FROM "person" WHERE "city" NOT LIKE \'%lon%\' AND "city" NOT LIKE \'%foo%\' AND "city" NOT LIKE \'%bar%\''
+		yield m, "person", "id", {"city[!~]": ["lon", "foo", "bar"]}, 'SELECT "id" FROM "person" WHERE "city" NOT LIKE \'%lon%\' AND "city" NOT LIKE \'%foo%\' AND "city" NOT LIKE \'%bar%\''
 		# joining
-		yield "post", [
+		yield m, "post", [
 			"post.post_id",
 			"post.title",
 			"account.user_id",
@@ -87,7 +156,7 @@ class TestReadme(helpers.TestCase):
 			"post.user_id":  100,
 			"ORDER":  {"post.post_id":  "DESC"},
 			"LIMIT":  50
-		}, 'SELECT "post"."post_id","post"."title","account"."user_id","account"."city","replyer"."user_id","replyer"."city" FROM "post" LEFT JOIN "account4" ON "account4"."author_id"="post"."user_id" AND "album"."user_id"="post"."user_id" LEFT JOIN "album2" ON "account"."user_id"="post"."user_id" LEFT JOIN "account2" "replyer" ON "replyer"."replyer_id"="post"."user_id" LEFT JOIN "account3" ON "account3"."author_id"="post"."user_id" LEFT JOIN "photo" ON "photo"."user_id"="post"."user_id" AND "photo"."avatar_id"="post"."avatar_id" LEFT JOIN "album" ON "album"."user_id"="post"."user_id" LEFT JOIN "account" ON "account"."author_id"="post"."user_id" WHERE "post"."user_id" = 100 ORDER BY "post"."post_id" DESC LIMIT 1,50', True, {
+		}, 'SELECT "post"."post_id","post"."title","account"."user_id","account"."city","replyer"."user_id","replyer"."city" FROM "post" LEFT JOIN "account4" ON "account4"."author_id"="post"."user_id" AND "album"."user_id"="post"."user_id" LEFT JOIN "album2" ON "account"."user_id"="post"."user_id" LEFT JOIN "account2" "replyer" ON "replyer"."replyer_id"="post"."user_id" LEFT JOIN "account3" ON "account3"."author_id"="post"."user_id" LEFT JOIN "photo" USING ("user_id","avatar_id") LEFT JOIN "album" USING ("user_id") LEFT JOIN "account" ON "account"."author_id"="post"."user_id" WHERE "post"."user_id" = 100 ORDER BY "post"."post_id" DESC LIMIT 1,50', True, {
 			"[>]account":  {"author_id":  "user_id"},
 			"[>]album":  "user_id",
 			"[>]photo":  ["user_id", "avatar_id"],
@@ -99,16 +168,68 @@ class TestReadme(helpers.TestCase):
 				"album.user_id":  "user_id"
 			}
 		}
-		
-	
-	def testWhereSelect(self, table, columns, where, sql, exact = True, join = None):
-		m = Medoo(database_type = 'sqlite', database_file = ':memory:')
+		yield m, "account", Function.count(Function.distinct('user_name'), alias = 'count'), {'id[<]': 10}, 'SELECT COUNT(DISTINCT "user_name") "count" FROM "account" WHERE "id" < 10'
+		yield m, "account", 'user_name(user)', {'logontime[<]': Raw("date('now')")}, """SELECT "user_name" "user" FROM "account" WHERE "logontime" < date('now')"""
+		yield m, "account", Field('user_name'), {'email': 'foo@bar.com'}, """SELECT "user_name" FROM "account" WHERE "email" = 'foo@bar.com'"""
+		yield m, 'account', '*', {'email[~]': Raw("""'%' || "user_name" || '%'""")}, """SELECT * FROM "account" WHERE "email" LIKE '%' || "user_name" || '%'"""
+
+	def testWhereSelect(self, m, table, columns, where, sql, exact = True, join = None):
 		m.select(table, columns = columns, where = where, join = join)
 		rsql = m.last()
 		if exact:
 			self.assertEqual(rsql, sql)
 		else:
 			self.assertItemsEqual(list(rsql), list(sql))
+	
+			
+	def dataProvider_testInsert(self):
+		m = Medoo(database_type = 'sqlite', database_file = ':memory:')
+		m.create('account', {
+			"id": "int primary key",
+			"user_name": "text", 
+			"email": "text", 
+			"age": "int",
+			"lang": "text"
+		})
+		yield m, "account", (1, "Bob Smith", 'foo@bar.com', 25, ["en", "fr"]), [(2, 'Michael Jodan', 'bar@foo.com', 33, ['jp', 'cn'])], """INSERT INTO "account" VALUES (1,'Bob Smith','foo@bar.com',25,'[''en'', ''fr'']'), (2,'Michael Jodan','bar@foo.com',33,'[''jp'', ''cn'']')"""
+		yield m, "account", {
+			"user_name":  "foo",
+			"email":  "foo@bar.com",
+			"age":  25,
+			"lang[json]":  ["en", "fr"] #:  '["en", "fr"]'
+		}, [{
+			"user_name":  "bar",
+			"email":  "bar@foo.com",
+			"age":  33,
+			"lang[json]":  ["jp", "cn"] #:  '["jp", "cn"]'
+		}], """INSERT INTO "account" ("lang","age","user_name","email") VALUES ('[''en'', ''fr'']',25,'foo','foo@bar.com'), ('[''jp'', ''cn'']',33,'bar','bar@foo.com')"""
+			
+	def testInsert(self, m, table, data, datas, sql):
+		m.insert(table, data, *datas)
+		self.assertEqual(m.last(), sql)
+	
+	def dataProvider_testUpdate(self):
+		m = Medoo(database_type = 'sqlite', database_file = ':memory:')
+		fields = Box()
+		fields.user_id = 'int'
+		fields.type = 'text'
+		fields.age = 'int'
+		fields.level = 'int'
+		fields.score = 'int'
+		fields.lang = 'text'
+		m.create('account', fields)
+		m.insert('account', (1, 'user', 24, 10, 50, None))
+		yield m, 'account', {
+			"type": "user",
+			"age[+]": 1,
+			"level[-]": 5,
+			"score[*]": 2,
+			"lang": ["en", "fr", "jp", "cn"]
+		}, {'user_id[<]': 1000}, """UPDATE "account" SET "lang"='[''en'', ''fr'', ''jp'', ''cn'']\',"age"="age"+1,"level"="level"-5,"type"='user',"score"="score"*2 WHERE "user_id" < 1000"""
+	
+	def testUpdate(self, m, table, data, where, sql):
+		m.update(table, data, where)
+		self.assertEqual(m.last(), sql)
 		
 if __name__ == '__main__':
 	unittest.main(verbosity = 2)

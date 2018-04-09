@@ -33,11 +33,10 @@ class MedooBase(object):
 		self.cursor = self.connection.cursor()
 		self.history = []
 		self.errors = []
-		self.lastid = None
 		self.sql = Builder(kwargs['dialect'] if 'dialect' in kwargs else None)
 		
 	def id (self):
-		return self.lastid
+		return self.cursor.lastrowid
 		
 	def _connect(self, *args, **kwargs):
 		raise NotImplementedError('API not implemented.')
@@ -162,6 +161,8 @@ class MedooBase(object):
 			else:
 				return True
 		except Exception as ex:
+			from sys import stderr
 			self.errors.append(ex)
-			return None
+			stderr.write(sql + '\n')
+			raise
 			

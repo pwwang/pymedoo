@@ -1,24 +1,6 @@
 import helpers, unittest, sqlite3
 from medoo.medooSqlite import MedooSqlite
 from medoo import Field, Function
-
-class TestMedooSqliteRecord(helpers.TestCase):
-	
-	def dataProvider_testInit(self):
-		yield {'a':1, 'b':2},
-		
-	def testInit(self, record):
-		r = MedooSqliteRecord(record)
-		self.assertDictEqual(r, record)
-	
-	def dataProvider_testGetSetAttr(self):
-		yield 'a', 1
-		yield 'b', 2
-	
-	def testGetSetAttr(self, key, val):
-		r = MedooSqliteRecord({})
-		setattr(r, key, val)
-		self.assertEqual(getattr(r, key), val)
 		
 class TestMedooSqlite(helpers.TestCase):
 	
@@ -72,7 +54,7 @@ class TestMedooSqlite(helpers.TestCase):
 		#yield m, "[><]table", ["t1.a", "b"], [("a1", "b1")], True, ValueError
 		#yield m, "table", ["t1.a", "b"], [("a1", "b1")], True, ValueError
 		#yield m, "table", ["a(x)", "b"], [("a1", "b1")], True, ValueError
-		yield m, "table", ["table.a", "b"], [("a1", "b1"), ("a2", "b2")], True
+		yield m, "table", ["a", "b"], [("a1", "b1"), ("a2", "b2")], True
 			
 	def testInsert(self, m, table, columns, datas, commit, exception = None):
 		data = datas.pop(0)
@@ -190,16 +172,20 @@ class TestMedooSqlite(helpers.TestCase):
 		m = MedooSqlite()
 		m.cursor.execute('create table "table1" ("a" text, "b" int)')
 		m.connection.commit()
+		yield m, "table1", {"a": "text", "c": "int"}, True
 		yield m, "table1", {"a": "text", "c": "int"}, False
 		
 	def testCreateTable(self, m, table, schema, ifnotexists = True, suffix = ''):
-		m.drop(table)
-		r = m.create(table, schema, ifnotexists, suffix)
+		self.assertTrue(m.tableExists(table))
 		if not ifnotexists:
-			m.insert(table, {'a':1, 'b':2})
-			self.assertIs(r, True)
+			self.assertRaises(Exception, m.create, table, schema, ifnotexists, suffix)
+			m.drop(table)
+			m.create(table, schema, ifnotexists, suffix)
+			m.insert(table, {'a':1, 'c':2})
 		else:
-			self.assertTrue(m.tableExists(table))
+			m.create(table, schema, ifnotexists, suffix)
+			m.insert(table, {'a':1, 'b':2})
+		
 		
 if __name__ == '__main__':
 	unittest.main(verbosity = 2)

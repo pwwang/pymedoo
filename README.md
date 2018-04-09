@@ -1,5 +1,6 @@
 # pymedoo
 A lightweight database framework for python inspired by [Medoo][1].  
+Focus more on data!  
 Note: currently only sqlite is supported.
 
 ## Install
@@ -13,6 +14,7 @@ from medoo import Medoo
 
 m = Medoo(database_type = 'sqlite', database_file = ':memory:')
 ```
+Other arguments from [`sqlite3.connect`][3] are also supported.
 
 ##  Where
 ### Basic condition
@@ -20,53 +22,65 @@ m = Medoo(database_type = 'sqlite', database_file = ':memory:')
 m.select("account", columns = "user_name", where = {
 	"email": "foo@bar.com"
 })
-# WHERE email = 'foo@bar.com'
+# WHERE "email" = 'foo@bar.com'
 
-m.select("account", columns = "user_name", where = {
-	"user_id": 200
-})
-# WHERE user_id = 200
+# Or you can use Box from medoo:
+from medoo import Box
+m.select("account", columns = "user_name", where = Box(
+	email = "foo@bar.com"
+))
+
+m.select("account", columns = "user_name", where = Box(
+	user_id = 200
+))
+# WHERE "user_id" = 200
  
 m.select("account", columns = "user_name", where = {
 	"user_id[>]": 200
 })
-# WHERE user_id > 200
+# WHERE "user_id" > 200
  
 m.select("account", columns = "user_name", where = {
 	"user_id[>=]": 200
 })
-# WHERE user_id >= 200
+# WHERE "user_id" >= 200
  
 m.select("account", columns = "user_name", where = {
 	"user_id[!]": 200
 })
-# WHERE user_id <> 200
+# WHERE "user_id" != 200
  
 m.select("account", columns = "user_name", where = {
 	"age[<>]":  [200, 500]
 })
-# WHERE age BETWEEN 200 AND 500
+# WHERE "age" BETWEEN 200 AND 500
  
 # [Negative condition]
 m.select("account", columns = "user_name", where = {
 	"age[><]":  [200, 500]
 })
-# WHERE NOT age BETWEEN 200 AND 500
+# WHERE "age" NOT BETWEEN 200 AND 500
 
 m.select("account", columns = "user_name", where = {
-	"AND":  {
-		"user_name[!]":  "foo",
-		"user_id[!]":  1024,
-		"email[!]":  ["foo@bar.com", "cat@dog.com", "admin@medoo.in"],
-		"promoted[!]":  1
-	}
+	"user_name[!]":  "foo",
+	"user_id[!]":  1024,
+	"email[!]":  ["foo@bar.com", "cat@dog.com", "admin@medoo.in"],
+	"promoted[!]":  1
 })
 # WHERE
-# `user_name` != 'foo' AND
-# `user_id` != 1024 AND
-# `email` NOT IN ('foo@bar.com','cat@dog.com','admin@medoo.in') AND
-# `city` IS NOT NULL
-# `promoted` != 1
+# "user_name" != 'foo' AND
+# "user_id" != 1024 AND
+# "email" NOT IN ('foo@bar.com','cat@dog.com','admin@medoo.in') AND
+# "city" IS NOT NULL
+# "promoted" != 1
+
+# You may want to keep the order:
+conditions = Box() # you may also use OrderedDict instead
+conditions["user_name[!]"] = "foo"
+conditions["user_id[!]"]   = 1024
+conditions["email[!]"]     = ["foo@bar.com", "cat@dog.com", "admin@medoo.in"]
+conditions["promoted[!]"]  = 1
+m.select("account", "user_name", conditions)
 ```
 
 ### Relative condition
@@ -86,7 +100,7 @@ m.select("account", columns = "user_name", where = {
 	"gender":  "female"
 })
  
-# WHERE user_id > 200 AND age BETWEEN 18 AND 25 AND gender = 'female'
+# WHERE "user_id" > 200 AND "age" BETWEEN 18 AND 25 AND "gender" = 'female'
  
 m.select("account", columns = "user_name", where = {
 	"OR":  {
@@ -95,7 +109,7 @@ m.select("account", columns = "user_name", where = {
 		"gender":  "female"
 	}
 })
-# WHERE user_id > 200 OR age BETWEEN 18 AND 25 OR gender = 'female'
+# WHERE "user_id" > 200 OR "age" BETWEEN 18 AND 25 OR "gender" = 'female'
 ```
 
 ### Compound
@@ -109,7 +123,7 @@ m.select("account", columns = '*', where = {
 		"password":  "12345"
 	}
 })
-# WHERE (user_name = 'foo' OR email = 'foo@bar.com') AND password = '12345'
+# WHERE ("user_name" = 'foo' OR "email" = 'foo@bar.com') AND "password" = '12345'
  
 # [IMPORTANT]
 # Because Medoo is using dict data construction to describe relativity condition,
@@ -164,14 +178,14 @@ m.select("post", join = {
 		"post.content"
 	], where = {
 		"AND":  {
-			"post.restrict[<]": medoo.Field("account.age"), # or Field("age", table = "account")			
+			"post.restrict[<]": medoo.Field("account.age") + 1, # or Field("age", table = "account")			
 			"account.user_name":  "foo",
 			"account.email":  "foo@bar.com",
 		}
 	}
 )
  
-# WHERE "post"."restrict" < "account"."age" AND "account"."user_name" = 'foo' AND "account"."email" = 'foo@bar.com'
+# WHERE "post"."restrict" < "account"."age" + 1 AND "account"."user_name" = 'foo' AND "account"."email" = 'foo@bar.com'
 ```
 
 ### LIKE Condition
@@ -181,27 +195,27 @@ m.select("person", columns = "id", where = {
 	"city[~]":  "lon"
 })
  
-WHERE "city" LIKE '%lon%'
+# WHERE "city" LIKE '%lon%'
  
 # Array support
 m.select("person", columns = "id", where = {
 	"city[~]":  ["lon", "foo", "bar"]
 })
  
-WHERE "city" LIKE '%lon%' OR "city" LIKE '%foo%' OR "city" LIKE '%bar%'
+# WHERE "city" LIKE '%lon%' OR "city" LIKE '%foo%' OR "city" LIKE '%bar%'
  
 # Negative condition [!~]
 m.select("person", columns = "id",  where = {
 	"city[!~]":  "lon"
 })
  
-WHERE "city" NOT LIKE '%lon%'
+# WHERE "city" NOT LIKE '%lon%'
 
 m.select("person", columns = "id",  where = {
 	"city[!~]":  ["lon", "foo", "bar"]
 })
  
-WHERE "city" NOT LIKE '%lon%' AND "city" NOT LIKE '%foo%' AND "city" NOT LIKE '%bar%'
+# WHERE "city" NOT LIKE '%lon%' AND "city" NOT LIKE '%foo%' AND "city" NOT LIKE '%bar%'
 ```
 
 ## Select
@@ -214,7 +228,7 @@ datas = m.select("account", columns = [
 	"user_id[>]":  100
 })
  
-# datas = [
+# datas.fetchall() == [
 # 	{
 # 		"user_name":  "foo",
 # 		"email":  "foo@bar.com"
@@ -225,7 +239,7 @@ datas = m.select("account", columns = [
 # 	}
 # ]
  
-for data in datas:
+for data in datas.fetchall():
 	print "user_name: " + data.user_name + " - email: " + data.email
  
 # Select all columns
@@ -263,18 +277,18 @@ m.select("post", {
  
 	# If you want to join the same table with different value,
 	# you have to assign the table with alias.
-	"[>]account (replyer)":  ["replyer_id":  "user_id"],
+	# "[>]account (replyer)":  ["replyer_id":  "user_id"],
  
 	# You can refer the previous joined table by adding the table name before the column.
-	"[>]account":  ["author_id":  "user_id"],
-	"[>]album":  ["account.user_id":  "user_id"],
+	# "[>]account":  ["author_id":  "user_id"],
+	# "[>]album":  ["account.user_id":  "user_id"],
  
 	# Multiple condition
-	"[>]account":  [
-		"author_id":  "user_id",
-		"album.user_id":  "user_id"
-	}
-], [
+	# "[>]account":  {
+	#	"author_id":  "user_id",
+	#	"album.user_id":  "user_id"
+	#}
+}, [
 	"post.post_id",
 	"post.title",
 	"account.user_id",
@@ -288,43 +302,74 @@ m.select("post", {
 })
  
 # SELECT
-# 	`post`.`post_id`,
-# 	`post`.`title`,
-# 	`account`.`city`
-# FROM `post`
-# LEFT JOIN `account` ON `post`.`author_id` = `account`.`user_id`
-# LEFT JOIN `album` USING (`user_id`)
-# LEFT JOIN `photo` USING (`user_id`, `avatar_id`)
+# 	"post"."post_id",
+# 	"post"."title",
+# 	"account"."city"
+# FROM "post"
+# LEFT JOIN "account" ON "post"."author_id" = "account"."user_id"
+# LEFT JOIN "album" USING ("user_id")
+# LEFT JOIN "photo" USING ("user_id","avatar_id")
 # WHERE
-# 	`post`.`user_id` = 100
-# ORDER BY `post`.`post_id` DESC
-# LIMIT 50
+# 	"post"."user_id" = 100
+# ORDER BY "post"."post_id" DESC
+# LIMIT 1,50
 ```
 
 ## Insert
 ```python
+# insert without keys: data have to be the same order as the fields in database.
+#                   id, user_name,    email,        ...
+m.insert("account", (1, 'Bob Smith', 'foo@bar.com', ...), (2, 'Michael Jodan', 'bar@foo.com', ...), ...)
+
+# last insert(row) id
+print m.id()
+
+# indicate fields in first given data
+data = Box()
+data.id        = 1
+data.user_name = "foo"
+data.age       = 25
+data.lang      = ["en", "fr"] # value inserted into db: "['en', 'fr']"
+m.insert("account", data, (2, "bar", 33, ["cn", "jp"]))
+
+# indicate fields in all given data, order doesn't matter
 m.insert("account", {
 	"user_name":  "foo",
 	"email":  "foo@bar.com",
 	"age":  25,
-	"lang":  ["en", "fr", "jp", "cn"] #: '[\'en\', \'fr\', \'jp\', \'cn\']'
+	"lang":  ["en", "fr"] #:  "['en', 'fr']"
+}, {
+	"user_name":  "bar",
+	"email":  "bar@foo.com",
+	"age":  33,
+	"lang":  ["jp", "cn"] #:  "['jp', 'cn']"
 })
- 
+
+# hold on the transaction:
 m.insert("account", {
 	"user_name":  "foo",
 	"email":  "foo@bar.com",
 	"age":  25,
-	"lang[JSON]":  ["en", "fr", "jp", "cn"] #:  '["en","fr","jp","cn"]'
-})
+	"lang":  ["en", "fr"] #:  "['en', 'fr']"
+}, commit = False)
+m.insert("account", {
+	"user_name":  "bar",
+	"email":  "bar@foo.com",
+	"age":  33,
+	"lang":  ["jp", "cn"] #:  "['jp', 'cn']"
+}, commit = False)
+m.commit()
 ```
 
 ## Update
 ```python
+print m.select("account").fetchone()
+# Box(lang=None, user_id=1, level=10, age=24, score=50, type=user)
 m.update("account", {
 	"type":  "user",
  
 	# All age plus one
-	"age[+]":  1,
+	"age[+]":  1, # or Field("age") + 1
  
 	# All level subtract 5
 	"level[-]":  5,
@@ -334,12 +379,11 @@ m.update("account", {
  
 	# Array value
 	"lang":  ["en", "fr", "jp", "cn"],
- 
-	# Array value encoded as JSON
-	"lang [JSON]":  ["en", "fr", "jp", "cn"],
 }, {
 	"user_id[<]":  1000
 })
+print m.select("account").fetchone()
+# Box(lang=['en', 'fr', 'jp', 'cn'], user_id=1, level=5, age=25, score=100, type=user)
 ```
 
 ## Delete
@@ -350,25 +394,36 @@ m.delete("account", {
 		"age[<]":  18
 	}
 })
- 
-# The return object of delete() is PDOStatement, so you can use its methods to get more information. 
-m.delete("account", {
-	"AND":  {
-		"type":  "business",
-		"age[<]":  18
-	}
-})
+```
+
+## Function, Field, Table, Raw
+```python
+from medoo import Function, Field, Table, Raw
+result = m.select('account', Function.count(Function.distinct('user_name'), alias = 'count'), {'id[<]': 10})
+# SELECT COUNT(DISTINCT "user_name") "count" FROM "account" WHERE "id" < 10
+print result.count
+
+m.select('account', 'user_name(user)', {'logontime[<]': Raw("date('now')")})
+#                   "AS" here not necessary
+# SELECT "user_name" "user" FROM "account" WHERE "logontime" < date('now')
+
+m.select('account', Field('user_name'), {'email': 'foo@bar.com'})
+# SELECT "user_name" FROM "account" WHERE "email" = 'foo@bar.com'
+
+m.select('account', '*', {'email[~]': Raw("""'%' || "user_name" || '%'""")})
+# SELECT * FROM "account" WHERE "email" LIKE '%' || "user_name" || '%'
 ```
 
 ## Error
 ```python
-m.select("account", None, '* WHERE', {
-	"user_id[<]":  20
-})
+try:
+	m.select("account", None, '*WHERE', {
+		"user_id[<]":  20
+	})
+except Exception:
+	print m.error()
  
-print m.error()
- 
-# [OperationalError('near "*": syntax error',)]
+# [OperationalError('near "*WHERE": syntax error',)]
 ```
 
 ## Log
@@ -399,7 +454,7 @@ print m.log()
 #	"INSERT INTO "account" ("user_name", "email") VALUES ('foo', 'foo@bar.com')"
 # ]
  
-# Will output only one last record if "logging":  false or ignored by default on initialization
+# Will output only one last record if "logging":  False or ignored by default on initialization
 # [
 #	"INSERT INTO "account" ("user_name", "email") VALUES ('foo', 'foo@bar.com')"
 # ]
@@ -425,3 +480,4 @@ print m.last()
 
 [1]: https://medoo.in/
 [2]: https://github.com/kayak/pypika
+[3]: https://docs.python.org/2/library/sqlite3.html#sqlite3.connect

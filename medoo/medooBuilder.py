@@ -19,8 +19,16 @@ class WhereParseError(Exception):
 	
 class OrderbyParseError(Exception):
 	pass
+	
+class Term(object):
+	def sql(self):
+		pass
 
-class Raw(str):
+	def __str__(self):
+		return self.sql()
+
+class Raw(str, Term):
+
 	def sql(self):
 		return self
 	
@@ -28,7 +36,7 @@ class MetaFuncion(type):
 	def __getattr__(klass, name):
 		return lambda *fields, **kwargs: Function(name, *fields, **kwargs)
 	
-class Function(object):
+class Function(Term):
 	
 	__metaclass__ = MetaFuncion
 	
@@ -44,9 +52,6 @@ class Function(object):
 	
 	def sql(self):
 		return getattr(self.dialect, self.fn)(*self.fields, **self.kwargs)
-		
-	def __str__(self):
-		return self.sql()
 	
 	def __hash__(self):
 		return hash((self.fn,) + tuple(str(field) for field in self.fields))
@@ -98,12 +103,12 @@ class Dialect(object):
 		
 	@staticmethod
 	def value(item):
-		if isinstance(item, (int, float)):
+		if isinstance(item, (int, float, long)):
 			return str(item)
 		elif isinstance(item, (Raw, Field)):
 			return item.sql()
 		else:
-			return "'{}'".format(item.replace("'", "''"))
+			return "'{}'".format(str(item).replace("'", "''"))
 			
 	@staticmethod
 	def distinct(*fields, **kwargs):
@@ -189,7 +194,7 @@ class Dialect(object):
 				value = right if isinstance(right, Raw) else dialect.value(dialect.likeValue(right))
 			return '%s %s %s' % (left, operator, value)		
 
-class Table(object):
+class Table(Term):
 	#                     [>]    schema.               table              (alias)
 	REGEXP_TABLE  = r'^\s*(?:\[([<>]+)\])?\s*(?:([a-zA-Z0-9_]+)\.)?([a-zA-Z0-9_]+)\s*(?:\(([a-zA-Z0-9_]+)\))?\s*(?:#.*)?$'
 	
@@ -226,9 +231,6 @@ class Table(object):
 	def __hash__(self):
 		return hash((self.join, self.schema, self.table, self.alias))
 		
-	def __str__(self):
-		return self.sql()
-		
 	def __eq__(self, other):
 		if not isinstance(other, Table):
 			return False
@@ -252,7 +254,7 @@ class Table(object):
 		else:
 			return [Table(tablestr, dialect) for tablestr in _alwaysList(tablelist)]
 		
-class Field(object):
+class Field(Term):
 	
 	#                      table.field(alias)[operator] # comment
 	REGEXP_FIELD  = r'^\s*(?:([a-zA-Z0-9_]+)\.)?([a-zA-Z0-9_]+|\*)\s*(?:\(([a-zA-Z0-9_]+)\))?(?:\[(.+?)\])?\s*(?:#.*)?$'
@@ -287,9 +289,6 @@ class Field(object):
 		
 	def __hash__(self):
 		return hash((self.table, self.field, self.alias, self.operator))
-		
-	def __str__(self):
-		return self.sql()
 		
 	def __eq__(self, other):
 		if not isinstance(other, Field):
@@ -336,7 +335,7 @@ class Field(object):
 		else:
 			return [Field(fieldstr, dialect) for fieldstr in _alwaysList(fieldlist)]
 			
-class UpdateSet(object):
+class UpdateSet(Term):
 	
 	def __init__(self, key, value, dialect = None):
 		self.key = key
@@ -358,10 +357,7 @@ class UpdateSet(object):
 			else:
 				return getattr(self.dialect, key.operator)(key, val)
 		
-	def __str__(self):
-		return self.sql()
-		
-class WhereTerm(object):
+class WhereTerm(Term):
 	
 	def __init__(self, key, value, dialect = None):
 		self.key   = key
@@ -378,10 +374,7 @@ class WhereTerm(object):
 			left  = field.sql()
 			return self.dialect.operate(field.operator, left, self.value, self.dialect)		
 		
-	def __str__(self):
-		return self.sql()
-		
-class Where(object):
+class Where(Term):
 	
 	def __init__(self, wheredict = None, dialect = None):
 		self.wheredict = wheredict
@@ -413,13 +406,9 @@ class Where(object):
 					sqlitems.append('(%s)' % (' OR '.join(whereterms)))
 			else:
 				sqlitems.append(WhereTerm(key, val).sql())
-		return ' AND '.join(sqlitems)
+		return ' AND '.join(sqlitems)		
 		
-	def __str__(self):
-		return self.sql()
-		
-		
-class JoinOnTerm(object):
+class JoinOnTerm(Term):
 	
 	def __init__(self, key, value, table, primary_table, dialect = None):
 		self.key     = key
@@ -437,10 +426,7 @@ class JoinOnTerm(object):
 			right.table = self.ptable
 		return Field.stringify(left, False) + '=' + Field.stringify(right, False)
 		
-	def __str__(self):
-		return self.sql()
-		
-class JoinOn(object):
+class JoinOn(Term):
 	
 	def __init__(self, joinondict, table = None, primary_table = None, dialect = None):
 		self.joinondict = joinondict
@@ -458,10 +444,20 @@ class JoinOn(object):
 			sqlitems.append(JoinOnTerm(key, val, self.table, self.ptable, self.dialect).sql())
 		return ' AND '.join(sqlitems)
 		
-	def __str__(self):
-		return self.sql()
+class JoinUsing(Term):
+	
+	def __init__(self, fields, dialect):
+		self.fields  = fields
+		self.dialect = dialect
+	
+	def sql(self):
+		sqlitems = []
+		for field in self.fields:
+			field = Field.parse(field, self.dialect)[0]
+			sqlitems.append(Field.stringify(field, False))
+		return '(%s)' % (','.join(sqlitems))
 		
-class Builder(object):
+class Builder(Term):
 	
 	def __init__(self, dialect = None):
 		self.terms   = []
@@ -611,31 +607,28 @@ class Builder(object):
 				table.join = '><'
 			self.terms.append(table)
 			if isinstance(val, dict):
-				pass
-			elif isinstance(val, (tuple, list)):
-				val = {v:v for v in val}
+				self.terms.append('ON')
+				newval = {}
+				for k, v in val.items():
+					fieldk = Field.parse(k, self.dialect)[0]
+					if isinstance(fieldk, Table) and isinstance(table, Table) and not fieldk.table:
+						fieldk.table = table.alias or table.table
+					fieldv = Field.parse(v, self.dialect)[0]
+					newval[fieldk] = fieldv
+				self.terms.append(JoinOn(newval, table, self.table, self.dialect))
 			else:
-				val = {val:val}
-			self.terms.append('ON')
-			newval = {}
-			for k, v in val.items():
-				fieldk = Field.parse(k, self.dialect)[0]
-				if isinstance(fieldk, Table) and isinstance(table, Table) and not fieldk.table:
-					fieldk.table = table.alias or table.table
-				fieldv = Field.parse(v, self.dialect)[0]
-				newval[fieldk] = fieldv
-			self.terms.append(JoinOn(newval, table, self.table, self.dialect))
+				self.terms.append('USING')
+				if not isinstance(val, (tuple, list)):
+					val = [val]
+				if not isinstance(val, list):
+					val = list(val)
+				self.terms.append(JoinUsing(val, self.dialect))
+			
 		return self		
 		
 	def sql(self):
 		self.table = None
-		return ' '.join([
-			t.sql() if isinstance(t, (Table, Field, Where, Function, JoinOn)) else t \
-			for t in self.terms
-		])
-		
-	def __str__(self):
-		return self.sql()
+		return ' '.join([str(t)	for t in self.terms])
 		
 	def clear(self):
 		self.table = None
