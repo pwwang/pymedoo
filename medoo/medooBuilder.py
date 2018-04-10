@@ -381,17 +381,16 @@ class Where(Term):
 		self.dialect   = dialect or Dialect
 	
 	def sql(self):
-		
 		sqlitems = []
 		for key, val in self.wheredict.items():	
 			if isinstance(key, Field):
-				sqlitems.append(WhereTerm(key, val).sql())
+				sqlitems.append(WhereTerm(key, val, self.dialect).sql())
 			elif isinstance(key, Function):
 				sqlitems.append(key.sql() + self.dialect.value(val))
 			elif key.split('#')[0].strip() == 'AND':
 				if not isinstance(val, (list, dict)):
 					raise WhereParseError('Expect dict or item list for conditions to be connected by AND: "%s"' % val)
-				whereterms = [Where({k:v}).sql() for k, v in dict(val).items()]
+				whereterms = [Where({k:v}, self.dialect).sql() for k, v in dict(val).items()]
 				if len(whereterms) == 1:
 					sqlitems.append(whereterms[0])
 				else:
@@ -399,13 +398,13 @@ class Where(Term):
 			elif key.split('#')[0].strip() == 'OR':
 				if not isinstance(val, (list, dict)):
 					raise WhereParseError('Expect dict or item list for conditions to be connected by OR: "%s"' % val)
-				whereterms = [Where({k:v}).sql() for k, v in dict(val).items()]
+				whereterms = [Where({k:v}, self.dialect).sql() for k, v in dict(val).items()]
 				if len(whereterms) == 1:
 					sqlitems.append(whereterms[0])
 				else:
 					sqlitems.append('(%s)' % (' OR '.join(whereterms)))
 			else:
-				sqlitems.append(WhereTerm(key, val).sql())
+				sqlitems.append(WhereTerm(key, val, self.dialect).sql())
 		return ' AND '.join(sqlitems)		
 		
 class JoinOnTerm(Term):
