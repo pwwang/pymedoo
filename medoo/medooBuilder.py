@@ -9,19 +9,19 @@ def _alwaysList(s):
 
 class TableParseError(Exception):
 	pass
-	
+
 class FieldParseError(Exception):
 	pass
-	
+
 class ValueParseError(Exception):
 	pass
-	
+
 class WhereParseError(Exception):
 	pass
-	
+
 class OrderbyParseError(Exception):
 	pass
-	
+
 class Term(object):
 	def sql(self):
 		pass
@@ -33,13 +33,13 @@ class Raw(str, Term):
 
 	def sql(self):
 		return self
-	
+
 class MetaFuncion(type):
 	def __getattr__(klass, name):
 		return lambda *fields, **kwargs: Function(name, *fields, **kwargs)
-	
+
 class Function(six.with_metaclass(MetaFuncion, Term)):
-	
+
 	def __init__(self, fn, *fields, **kwargs):
 		self.fn      = fn
 		self.fields  = []
@@ -49,58 +49,56 @@ class Function(six.with_metaclass(MetaFuncion, Term)):
 		self.kwargs  = kwargs
 		for fieldlist in fields:
 			self.fields += Field.parse(fieldlist, self.dialect)
-	
+
 	def sql(self):
 		return getattr(self.dialect, self.fn)(*self.fields, **self.kwargs)
-	
+
 	def __hash__(self):
 		return hash((self.fn,) + tuple(str(field) for field in self.fields))
-		
+
 	def __eq__(self, other):
 		return self.fn == other.fn and self.fields == other.fields
-	
+
 	def __ne__(self, other):
 		return self.fn != other.fn or self.fields != other.fields
-		
+
 	def __add__(self, value):
 		return Raw(self.sql() + '+' + self.dialect.value(value))
-		
+
 	def __sub__(self, value):
 		return Raw(self.sql() + '-' + self.dialect.value(value))
-		
+
 	def __mul__(self, value):
 		return Raw(self.sql() + '*' + self.dialect.value(value))
-		
+
 	def __div__(self, value):
 		return Raw(self.sql() + '/' + self.dialect.value(value))
-		
+
 class MetaDialect(type):
 	def __getattr__(klass, name):
 		def func(*fields, **kwargs):
 			dialect  = Dialect
 			if 'dialect' in kwargs and kwargs['dialect']:
 				dialect = kwargs['dialect']
-			
+
 			operator = ''
 			realfields = [field for field in fields if isinstance(field, Field)]
-			if realfields: 
+			if realfields:
 				operator = realfields[0].operator or ''
-			
+
 			return '%s(%s)%s' % (name.upper(), ','.join([Field.stringify(field, False) for field in fields]), operator)
 		return func
 
 class Dialect(six.with_metaclass(MetaDialect)):
 
-	__metaclass__ = MetaDialect
-	
 	@staticmethod
 	def quote(item):
 		return '"%s"' % item.replace('"', '""')
-	
+
 	@staticmethod
 	def alias(item, as_):
 		return '%s %s' % (item, as_)
-		
+
 	@staticmethod
 	def value(item):
 		if isinstance(item, six.integer_types + (float, )):
@@ -109,11 +107,11 @@ class Dialect(six.with_metaclass(MetaDialect)):
 			return item.sql()
 		else:
 			return "'{}'".format(str(item).replace("'", "''"))
-			
+
 	@staticmethod
 	def distinct(*fields, **kwargs):
 		return 'DISTINCT ' + ','.join([Field.stringify(field, False) for field in fields])
-		
+
 	@staticmethod
 	def count(*fields, **kwargs):
 		if not fields: fields = ['*']
@@ -122,22 +120,22 @@ class Dialect(six.with_metaclass(MetaDialect)):
 			dialect = kwargs['dialect']
 		if len(fields) > 1:
 			raise FieldParseError('Only 1 field allow for COUNT: "%s"' % fields)
-		
+
 		fieldsql = Field.stringify(fields[0], False)
 		if 'alias' in kwargs:
 			return dialect.alias('COUNT(%s)' % fieldsql, dialect.quote(kwargs['alias']))
 		else:
 			return 'COUNT(%s)' % fieldsql
-			
+
 	@staticmethod
 	def json(field, value):
 		import json
 		return field.sql() + '=' + field.dialect.value(json.dumps(value))
-		
+
 	@staticmethod
 	def limit(offset, lim):
 		return '%s,%s' % (offset, lim)
-			
+
 	@staticmethod
 	def join(jointype):
 		if jointype == '>':
@@ -149,11 +147,11 @@ class Dialect(six.with_metaclass(MetaDialect)):
 		if jointype == '><':
 			return 'JOIN'
 		raise TableParseError('Unknown join type: "%s"' % jointype)
-			
+
 	@staticmethod
 	def likeValue(s):
 		return '%{}%'.format(s) if not s.startswith('%') and not s.endswith('%') else s
-		
+
 	@staticmethod
 	def operate(operator, left, right, dialect = None):
 		dialect = dialect or Dialect
@@ -192,12 +190,12 @@ class Dialect(six.with_metaclass(MetaDialect)):
 			elif operator == '!~':
 				operator = 'NOT LIKE'
 				value = right if isinstance(right, Raw) else dialect.value(dialect.likeValue(right))
-			return '%s %s %s' % (left, operator, value)		
+			return '%s %s %s' % (left, operator, value)
 
 class Table(Term):
 	#                     [>]    schema.               table              (alias)
 	REGEXP_TABLE  = r'^\s*(?:\[([<>]+)\])?\s*(?:([a-zA-Z0-9_]+)\.)?([a-zA-Z0-9_]+)\s*(?:\(([a-zA-Z0-9_]+)\))?\s*(?:#.*)?$'
-	
+
 	def __init__(self, tablestr, dialect = None):
 		if isinstance(tablestr, Table):
 			self.join    = tablestr.join
@@ -209,13 +207,13 @@ class Table(Term):
 			m = re.match(Table.REGEXP_TABLE, tablestr)
 			if not m:
 				raise TableParseError('Cannot understand table: "%s"' % tablestr)
-				
+
 			self.join    = m.group(1)
 			self.schema  = m.group(2)
 			self.table   = m.group(3)
 			self.alias   = m.group(4)
 			self.dialect = dialect or Dialect
-		
+
 	def sql(self, withAlias = True):
 		dialect = self.dialect
 		ret = ''
@@ -227,10 +225,10 @@ class Table(Term):
 		if self.alias and withAlias:
 			ret = dialect.alias(ret, dialect.quote(self.alias))
 		return ret
-		
+
 	def __hash__(self):
 		return hash((self.join, self.schema, self.table, self.alias))
-		
+
 	def __eq__(self, other):
 		if not isinstance(other, Table):
 			return False
@@ -240,10 +238,10 @@ class Table(Term):
 			return False
 		if self.alias != other.alias:
 			return False
-			
+
 	def __ne__(self, other):
 		return not self.__eq__(other)
-		
+
 	@staticmethod
 	def parse(tablelist, dialect = None):
 		dialect = dialect or Dialect
@@ -253,12 +251,12 @@ class Table(Term):
 			return [tablelist]
 		else:
 			return [Table(tablestr, dialect) for tablestr in _alwaysList(tablelist)]
-		
+
 class Field(Term):
-	
+
 	#                      table.field(alias)[operator] # comment
 	REGEXP_FIELD  = r'^\s*(?:([a-zA-Z0-9_]+)\.)?([a-zA-Z0-9_]+|\*)\s*(?:\(([a-zA-Z0-9_]+)\))?(?:\[(.+?)\])?\s*(?:#.*)?$'
-	
+
 	def __init__(self, fieldstr, dialect = None):
 		if isinstance(fieldstr, Field):
 			self.table    = fieldstr.table
@@ -266,17 +264,17 @@ class Field(Term):
 			self.alias    = fieldstr.alias
 			self.operator = fieldstr.operator
 			self.dialect  = dialect or fieldstr.dialect
-		else:	
+		else:
 			m = re.match(Field.REGEXP_FIELD, fieldstr)
 			if not m:
 				raise FieldParseError('Cannot understand field: "%s"' % fieldstr)
-			
+
 			self.table    = m.group(1)
 			self.field    = m.group(2)
 			self.alias    = m.group(3)
 			self.operator = m.group(4)
 			self.dialect  = dialect or Dialect
-		
+
 	def sql(self, withAlias = True):
 		dialect = self.dialect
 		ret = ''
@@ -286,10 +284,10 @@ class Field(Term):
 		if self.alias and withAlias:
 			ret = dialect.alias(ret, dialect.quote(self.alias))
 		return ret
-		
+
 	def __hash__(self):
 		return hash((self.table, self.field, self.alias, self.operator))
-		
+
 	def __eq__(self, other):
 		if not isinstance(other, Field):
 			return False
@@ -299,22 +297,22 @@ class Field(Term):
 			return False
 		if self.alias != other.alias:
 			return False
-			
+
 	def __ne__(self, other):
 		return not self.__eq__(other)
-		
+
 	def __add__(self, value):
 		return Raw(self.sql() + '+' + self.dialect.value(value))
-		
+
 	def __sub__(self, value):
 		return Raw(self.sql() + '-' + self.dialect.value(value))
-		
+
 	def __mul__(self, value):
 		return Raw(self.sql() + '*' + self.dialect.value(value))
-		
+
 	def __div__(self, value):
 		return Raw(self.sql() + '/' + self.dialect.value(value))
-		
+
 	@staticmethod
 	def stringify(field, withAlias = True):
 		if isinstance(field, Field):
@@ -324,7 +322,7 @@ class Field(Term):
 		elif isinstance(field, Raw):
 			return str(field)
 		return str(field)
-			
+
 	@staticmethod
 	def parse(fieldlist, dialect = None):
 		dialect = dialect or Dialect
@@ -334,19 +332,19 @@ class Field(Term):
 			return [fieldlist]
 		else:
 			return [Field(fieldstr, dialect) for fieldstr in _alwaysList(fieldlist)]
-			
+
 class UpdateSet(Term):
-	
+
 	def __init__(self, key, value, dialect = None):
 		self.key = key
 		self.value = value
 		self.dialect = dialect or Dialect
-	
+
 	def sql(self):
 		key = self.key
 		if not isinstance(key, (Function, Raw)):
 			key = Field(key, self.dialect)
-		
+
 		if not isinstance(key, Field) or not key.operator:
 			return key.sql() + '=' + self.dialect.value(self.value)
 		else:
@@ -356,33 +354,33 @@ class UpdateSet(Term):
 				return (key.sql() + '=') + getattr(key, operators[key.operator])(val)
 			else:
 				return getattr(self.dialect, key.operator)(key, val)
-		
+
 class WhereTerm(Term):
-	
+
 	def __init__(self, key, value, dialect = None):
 		self.key   = key
 		self.value = value
 		self.dialect = dialect or Dialect
-		
+
 	def sql(self):
 		if isinstance(self.key, Raw):
-			return self.key			
+			return self.key
 		else:
 			field = Field(self.key)
 			if field.alias:
 				raise FieldParseError('Alias not allowed for field in where clause: "%s"' % self.key)
 			left  = field.sql()
-			return self.dialect.operate(field.operator, left, self.value, self.dialect)		
-		
+			return self.dialect.operate(field.operator, left, self.value, self.dialect)
+
 class Where(Term):
-	
+
 	def __init__(self, wheredict = None, dialect = None):
 		self.wheredict = wheredict
 		self.dialect   = dialect or Dialect
-	
+
 	def sql(self):
 		sqlitems = []
-		for key, val in self.wheredict.items():	
+		for key, val in self.wheredict.items():
 			if isinstance(key, Field):
 				sqlitems.append(WhereTerm(key, val, self.dialect).sql())
 			elif isinstance(key, Function):
@@ -405,17 +403,17 @@ class Where(Term):
 					sqlitems.append('(%s)' % (' OR '.join(whereterms)))
 			else:
 				sqlitems.append(WhereTerm(key, val, self.dialect).sql())
-		return ' AND '.join(sqlitems)		
-		
+		return ' AND '.join(sqlitems)
+
 class JoinOnTerm(Term):
-	
+
 	def __init__(self, key, value, table, primary_table, dialect = None):
 		self.key     = key
 		self.value   = value
 		self.table   = table
 		self.ptable  = primary_table
 		self.dialect = dialect or Dialect
-		
+
 	def sql(self):
 		left  = Field.parse(self.key)[0]
 		right = Field.parse(self.value)[0]
@@ -424,9 +422,9 @@ class JoinOnTerm(Term):
 		if isinstance(right, Field) and not right.table:
 			right.table = self.ptable
 		return Field.stringify(left, False) + '=' + Field.stringify(right, False)
-		
+
 class JoinOn(Term):
-	
+
 	def __init__(self, joinondict, table = None, primary_table = None, dialect = None):
 		self.joinondict = joinondict
 		self.dialect    = dialect or Dialect
@@ -435,34 +433,34 @@ class JoinOn(Term):
 			self.ptable = primary_table
 		else:
 			self.ptable = primary_table.alias or primary_table.table
-	
+
 	def sql(self):
-		
+
 		sqlitems = []
 		for key, val in self.joinondict.items():
 			sqlitems.append(JoinOnTerm(key, val, self.table, self.ptable, self.dialect).sql())
 		return ' AND '.join(sqlitems)
-		
+
 class JoinUsing(Term):
-	
+
 	def __init__(self, fields, dialect):
 		self.fields  = fields
 		self.dialect = dialect
-	
+
 	def sql(self):
 		sqlitems = []
 		for field in self.fields:
 			field = Field.parse(field, self.dialect)[0]
 			sqlitems.append(Field.stringify(field, False))
 		return '(%s)' % (','.join(sqlitems))
-		
+
 class Builder(Term):
-	
+
 	def __init__(self, dialect = None):
 		self.terms   = []
 		self.table   = None
 		self.dialect = dialect or Dialect
-	
+
 	def select(self, *fields):
 		if not fields: fields = ['*']
 		self.terms.append('SELECT')
@@ -471,7 +469,7 @@ class Builder(Term):
 			fieldterms += Field.parse(fieldlist)
 		self.terms.append(','.join([Field.stringify(field) for field in fieldterms]))
 		return self
-	
+
 	def group(self, *fields):
 		self.terms.append('GROUP BY')
 		fieldterms = []
@@ -479,8 +477,8 @@ class Builder(Term):
 			fieldterms += Field.parse(fieldlist)
 		self.terms.append(','.join([Field.stringify(field) for field in fieldterms]))
 		return self
-	
-		
+
+
 	def from_(self, *tables):
 		self.terms.append('FROM')
 		for tablelist in tables:
@@ -492,7 +490,7 @@ class Builder(Term):
 				if not self.table: self.table = tables[0]
 				self.terms += tables
 		return self
-	
+
 	def where(self, conditions):
 		if not conditions:
 			return self
@@ -502,12 +500,12 @@ class Builder(Term):
 			wherestr = wherestr[1:-1]
 		self.terms.append(wherestr)
 		return self
-	
+
 	def having(self, conditions):
 		self.terms.append('HAVING')
 		self.terms.append(Where(conditions, self.dialect))
 		return self
-		
+
 	def update(self, table):
 		self.terms.append('UPDATE')
 		tablestr = table
@@ -518,7 +516,7 @@ class Builder(Term):
 			raise TableParseError('Alias is not allowed for update table: "%s"' % tablestr)
 		self.terms.append(table)
 		return self
-		
+
 	def set(self, updates):
 		self.terms.append('SET')
 		sets = []
@@ -526,7 +524,7 @@ class Builder(Term):
 			sets.append(UpdateSet(key, val, self.dialect).sql())
 		self.terms.append(','.join(sets))
 		return self
-		
+
 	def insert(self, table, *fields):
 		self.terms.append('INSERT INTO')
 		table = Table(table, self.dialect)
@@ -537,7 +535,7 @@ class Builder(Term):
 		if fieldterms:
 			self.terms.append('(%s)' % ','.join([Field.stringify(field) for field in fieldterms]))
 		return self
-		
+
 	def values(self, *values):
 		self.terms.append('VALUES')
 		vals = []
@@ -545,13 +543,13 @@ class Builder(Term):
 			vals.append('(' + ','.join([self.dialect.value(v) for v in value]) + ')')
 		self.terms.append(', '.join(vals))
 		return self
-		
+
 	def delete(self, table):
 		self.terms.append('DELETE FROM')
 		tables = Table.parse(table, self.dialect)
 		self.terms += tables
 		return self
-		
+
 	def order(self, orders):
 		self.terms.append('ORDER BY')
 		ords = []
@@ -569,7 +567,7 @@ class Builder(Term):
 				ords.append(Field.stringify(field) + ' ' + val2)
 		self.terms.append(','.join(ords))
 		return self
-			
+
 	def limit(self, limits):
 		self.terms.append('LIMIT')
 		if not isinstance(limits, (tuple, list)):
@@ -581,7 +579,7 @@ class Builder(Term):
 		offset, lim = limits
 		self.terms.append(self.dialect.limit(offset, lim))
 		return self
-		
+
 	def create(self, table, schema, ifnotexists = True, suffix = ''):
 		self.terms.append('CREATE TABLE')
 		if ifnotexists:
@@ -597,8 +595,8 @@ class Builder(Term):
 		self.terms.append(')')
 		self.terms.append(suffix)
 		return self
-		
-		
+
+
 	def join(self, joins):
 		for key, val in joins.items():
 			table = Table.parse(key, self.dialect)[0]
@@ -622,14 +620,13 @@ class Builder(Term):
 				if not isinstance(val, list):
 					val = list(val)
 				self.terms.append(JoinUsing(val, self.dialect))
-			
-		return self		
-		
+
+		return self
+
 	def sql(self):
 		self.table = None
 		return ' '.join([str(t)	for t in self.terms])
-		
+
 	def clear(self):
 		self.table = None
 		del self.terms[:]
-		
