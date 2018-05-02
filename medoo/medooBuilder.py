@@ -128,6 +128,19 @@ class Dialect(six.with_metaclass(MetaDialect)):
 			return 'COUNT(%s)' % fieldsql
 
 	@staticmethod
+	def concat(*fields, **kwargs):
+		dialect = Dialect
+		if 'dialect' in kwargs and kwargs['dialect']:
+			dialect = kwargs['dialect']
+
+		elements = [Field.stringify(field) for field in fields]
+		values   = [] if 'value' not in kwargs else \
+				   kwargs['value'] if isinstance(kwargs['value'], list) else \
+				   [kwargs['value']]
+		values   = [dialect.value(value) for value in values]
+		return '||'.join(elements + values)
+
+	@staticmethod
 	def json(field, value):
 		import json
 		return field.sql() + '=' + field.dialect.value(json.dumps(value))
