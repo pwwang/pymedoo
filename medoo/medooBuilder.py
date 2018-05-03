@@ -105,6 +105,8 @@ class Dialect(six.with_metaclass(MetaDialect)):
 			return str(item)
 		elif isinstance(item, Term):
 			return item.sql()
+		elif isinstance(item, (tuple, list, set)):
+			return '({})'.format(','.join([Dialect.value(it) for it in item]))
 		else:
 			return "'{}'".format(str(item).replace("'", "''"))
 
@@ -379,7 +381,7 @@ class WhereTerm(Term):
 		if isinstance(self.key, Raw):
 			return self.key
 		else:
-			field = Field(self.key)
+			field = Field.parse(self.key, self.dialect)[0]
 			if field.alias:
 				raise FieldParseError('Alias not allowed for field in where clause: "%s"' % self.key)
 			left  = field.sql()

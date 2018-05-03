@@ -3,57 +3,57 @@ from medoo.medooBuilder import _alwaysList, Function, Field, Raw, Dialect, Table
 
 
 class TestMedooBuiler(helpers.TestCase):
-	
+
 	def dataProvider_testAlwaysList(self):
 		yield [1,2,3], [1,2,3]
 		yield "1, , 2, 3", ['1','2','3']
-	
+
 	def testAlwaysList(self, input, output):
 		ret = _alwaysList(input)
 		self.assertListEqual(ret, output)
-		
+
 	def dataProvider_testFunctionInit(self):
 		yield 'what', ['table.field, table.field1'], ['field', 'field1']
-		
+
 	def testFunctionInit(self, fn, fields, outfields):
 		f = Function(fn, *fields)
 		self.assertIsInstance(f, Function)
 		self.assertEqual(f.fn, fn)
-		
+
 		for i in range(len(outfields)):
 			self.assertEqual(outfields[i], f.fields[i].field)
-			
+
 	def dataProvider_testFunctionHash(self):
 		yield Function('a', []),
-	
+
 	def testFunctionHash(self, fn):
 		f = list({fn:1}.keys())[0]
 		self.assertIsInstance(f, Function)
-		
+
 	def dataProvider_testFunctionSql(self):
 		yield Function.a('table.field1, table.field2'), 'A("table"."field1","table"."field2")'
 		yield Function.b('table.field1(field)'), 'B("table"."field1")'
 		yield Function.count('table.field1(field)', alias = 'cnt'), 'COUNT("table"."field1") "cnt"'
 		yield Function.count(Function.distinct(['table.field1', 'table.field2(field)'])), 'COUNT(DISTINCT "table"."field1","table"."field2")'
 		yield Function.distinct(Raw('"field"')), 'DISTINCT "field"'
-		
+
 	def testFunctionSql(self, fn, sql):
 		self.assertEqual(fn.sql(), sql)
-		
+
 	def dataProvider_testDialectQuote(self):
 		yield 'abc', '"abc"'
-		
+
 	def testDialectQuote(self, input, output):
 		ret = Dialect.quote(input)
 		self.assertEqual(ret, output)
-		
+
 	def dataProvider_testDialectAlias(self):
 		yield "a", "b", "a b"
-		
+
 	def testDialectAlias(self, input, alias, output):
 		ret = Dialect.alias(input, alias)
 		self.assertEqual(ret, output)
-		
+
 	def dataProvider_testDialectValue(self):
 		yield 1, '1'
 		yield 1.1, '1.1'
@@ -61,56 +61,57 @@ class TestMedooBuiler(helpers.TestCase):
 		yield Field('table.f(c)'), '"table"."f" "c"'
 		yield "awfwfe", "'awfwfe'"
 		yield "ab'cd", "'ab''cd'"
-		
+
 	def testDialectValue(self, input, output):
 		ret = Dialect.value(input)
 		self.assertEqual(ret, output)
-		
+
 	def dataProvider_testDialectLimit(self):
 		yield 1, 2, '1,2'
 		yield 3, 4, '3,4'
-		
+
 	def testDialectLimit(self, offset, lim, output):
 		ret = Dialect.limit(offset, lim)
 		self.assertEqual(ret, output)
-		
+
 	def dataProvider_testDialectJoin(self):
 		yield 'a', None, TableParseError
 		yield '>', 'LEFT JOIN'
 		yield '<', 'RIGHT JOIN'
 		yield '><', 'JOIN'
 		yield '<>', 'OUTER JOIN'
-		
+
 	def testDialectJoin(self, type, output, exception = None):
 		if exception:
 			self.assertRaises(exception, Dialect.join, type)
 		else:
 			ret = Dialect.join(type)
 			self.assertEqual(ret, output)
-			
+
 	def dataProvider_testDialectLikeValue(self):
 		yield 'a', '%a%'
 		yield '%a', '%a'
 		yield 'a%', 'a%'
-			
+
 	def testDialectLikeValue(self, input, output):
 		ret = Dialect.likeValue(input)
 		self.assertEqual(ret, output)
-		
+
 	def dataProvider_testDialectOperate(self):
 		yield '', '"field"', [1,2,3], '"field" IN (1,2,3)'
-		
+
 	def testDialectOperate(self, operator, left, right, output, dialect = Dialect):
 		ret = Dialect.operate(operator, left, right, dialect)
 		self.assertEqual(ret, output)
-		
+
 	def dataProvider_testWhere(self):
+		yield {Function.upper('field1[ IN ]'): ['v1', 'v2']}, 'UPPER("field1") IN (\'v1\',\'v2\')'
 		yield {Field('field1'): Field('field2')}, '"field1" = "field2"'
-		
+
 	def testWhere(self, wheredict, output):
 		ret = Where(wheredict)
 		self.assertEqual(ret.sql(), output)
-		
+
 	def dataProvider_testBuilder(self):
 		# 0
 		yield Builder().select('*').from_('table1, table2').join({
@@ -162,7 +163,7 @@ class TestMedooBuiler(helpers.TestCase):
 		yield Builder().select().from_(Builder().select().from_('table')), 'SELECT * FROM (SELECT * FROM "table")'
 		yield Builder().select(Function.count()).from_('table').where({'id[>]':100}), 'SELECT COUNT(*) FROM "table" WHERE "id" > 100'
 		yield Builder().update('table').set({'field[json]': {'a':1, 'b':2}}).where({'a': (1,2,3)}), 'UPDATE "table" SET "field"=\'{"a": 1, "b": 2}\' WHERE "a" IN (1,2,3)'
-		
+
 	def testBuilder(self, builder, sql, exact = True):
 		if exact:
 			self.assertEqual(builder.sql(), sql)
