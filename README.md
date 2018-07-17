@@ -155,7 +155,8 @@ print(me.select('Orders').export('csv', delimiter = '\t'))
 |10309|37|1996-09-19|
 |10310|77|1996-09-20|
 ```python
-# SELECT * FROM "Customers" AS "C",(SELECT "CustomerID" FROM "Orders") AS "O" WHERE "C"."CustomerID" = "O"."CustomerID"
+# SELECT * FROM "Customers" AS "C",(SELECT "CustomerID" FROM "Orders") AS "O" 
+#   WHERE "C"."CustomerID" = "O"."CustomerID"
 me.select([
     'Customers(C)', # the first table
     me.builder.select('Orders', 'CustomerID', sub = 'O')
@@ -171,7 +172,8 @@ me.select('Customers', where = {
 
 ### JOIN
 ```python
-# SELECT "O"."OrderID","C"."CustomerName","O"."OrderDate" FROM "Orders" AS "O" INNER JOIN "Customers" AS "C" ON "C"."CustomerID"="O"."CustomerID"
+# SELECT "O"."OrderID","C"."CustomerName","O"."OrderDate" FROM "Orders" AS "O" 
+#   INNER JOIN "Customers" AS "C" ON "C"."CustomerID"="O"."CustomerID"
 me.select('Orders(O)', 'O.OrderID,C.CustomerName,O.OrderDate', join = {
     'Customers(C)': 'CustomerID'
 })
