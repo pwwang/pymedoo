@@ -9,7 +9,7 @@ install:
   - pip install python-testly
 # command to run tests
 script:
-  - python tests/Builder.py
-  - python tests/Dialect.py
-  - python tests/Record.py
-  - python tests/Sqlite.py
+  - python tests/testBuilder.py
+  - python tests/testDialect.py
+  - python tests/testRecord.py
+  - python tests/testSqlite.py
