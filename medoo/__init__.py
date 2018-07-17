@@ -17,9 +17,9 @@ class utils(object):
 		"""
 		row = list(row)
 
-		for i in range(len(row)):
-			if hasattr(row[i], 'isoformat'):
-				row[i] = row[i].isoformat()
+		for i, r in enumerate(row):
+			if hasattr(r, 'isoformat'):
+				row[i] = r.isoformat()
 		return tuple(row)
 
 import importlib

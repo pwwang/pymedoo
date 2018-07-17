@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from .builder import Builder
 from .record import Records
 from .dialect import Dialect

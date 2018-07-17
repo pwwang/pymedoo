@@ -5,11 +5,14 @@ from ..dialect import Dialect
 class DialectMssql(Dialect):
 	
 	@classmethod
-	def limit(klass, limit, offset):
+	def limit(klass, limit, offset = None):
 		"""
 		Require SQL Server >= 2012
 		"""
-		return 'OFFSET {} ROWS FETCH NEXT {} ROWS ONLY'.format(offset, limit), -1
+		if offset:
+			return 'OFFSET {} ROWS FETCH NEXT {} ROWS ONLY'.format(offset, limit), -1
+		else:
+			return 'TOP {}'.format(limit), 1
 
 class Mssql(Base):
 

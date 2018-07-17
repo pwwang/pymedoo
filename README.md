@@ -1,9 +1,11 @@
 # pymedoo - A lightweight database framework for python.  
 it's inspired by [Medoo][1] for PHP and [Records][7] for python.  
 
+![Pypi][8] ![Github][9] ![Codacy][10] ![Codacy coverage][11] ![Travis building][12]
+
 ## Install
 ```bash
-pip install git+git://github.com/pwwang/pymedoo.git
+pip install medoo
 ```
 
 ## Required packages for databases
@@ -372,3 +374,8 @@ print(records.export('csv', delimiter = '\t'))
 [5]: http://www.pymssql.org/en/stable/
 [6]: https://oracle.github.io/python-cx_Oracle/
 [7]: https://github.com/kennethreitz/records
+[8]: https://img.shields.io/pypi/v/medoo.svg?style=flat-square
+[9]: https://img.shields.io/github/tag/pwwang/pymedoo.svg?style=flat-square
+[10]: https://img.shields.io/codacy/grade/83a79e32a9414a08be67d17b3e93a2ad.svg?style=flat-square
+[11]: https://img.shields.io/codacy/coverage/83a79e32a9414a08be67d17b3e93a2ad.svg?style=flat-square
+[12]: https://img.shields.io/travis/pwwang/pymedoo.svg?style=flat-square
