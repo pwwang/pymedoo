@@ -1,24 +1,52 @@
-VERSION = '0.0.0alpha'
-# expose Field, so it can be used as value in update set
+VERSION = '0.0.1'
 
-from .medooBuilder import Builder, Function, Raw, Field, Table
-from .medooSqlite import MedooSqlite
-from .medooBase import Box
+class utils(object):
+
+	@staticmethod
+	def alwaysList(x):
+		"""
+		Always return a list
+		"""
+		from six import string_types
+		return [y.strip() for y in x.split(',')] if isinstance(x, string_types) else list(x)
+
+	@staticmethod
+	def reduce_datetimes(row):
+		"""
+		Receives a row, converts datetimes to strings.
+		"""
+		row = list(row)
+
+		for i in range(len(row)):
+			if hasattr(row[i], 'isoformat'):
+				row[i] = row[i].isoformat()
+		return tuple(row)
+
+import importlib
+from .builder import Raw, Table, Field
+from .dialect import Dialect
 
 DATABASE_TYPES = {
-	'MedooSqlite': ['sqlite', 'sqlite3']
+	'Sqlite': ['sqlite', 'sqlite3'],
+	'Mysql' : 'mysql',
+	'Mssql' : 'mssql',
+	'Pgsql' : ['pgsql', 'postgres', 'postgresql'],
 }
 
 class Medoo(object):
 
-	def __new__(klass, *args, **kwargs):
-		if 'database_type' not in kwargs:
-			raise ValueError('No database type specified.')
+	def __new__(klass, dbtype, *args, **kwargs):
 
-		dbtype = kwargs['database_type']
-		del kwargs['database_type']
-		if dbtype not in [dbtype for dblist in DATABASE_TYPES.values() for dbtype in dblist]:
-			raise ValueError('Database type not supported: %s.' % dbtype)
+		for key, val in DATABASE_TYPES.items():
+			if not isinstance(val, list):
+				val = [val]
+			if not dbtype.lower() in val:
+				continue
 
-		if dbtype in DATABASE_TYPES['MedooSqlite']:
-			return MedooSqlite(*args, **kwargs)
+			mod   = importlib.import_module('.database.{}'.format(key.lower()), package = 'medoo')
+			klass = getattr(mod, key)
+			return klass(*args, **kwargs)
+
+		raise ValueError('Database type not supported: {}.'.format(dbtype))
+
+
