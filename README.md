@@ -21,10 +21,13 @@ pip install git+git://github.com/pwwang/pymedoo.git
 
 ```python
 from medoo import Medoo
+
 # For other arguments, please refer to the original connect function of each client.
 me = Medoo(dbtype = 'sqlite', database = 'file:///path/to/test.sqlite')
+
 # SELECT * FROM "Customers"
 rs = me.select('Customers')
+
 print(rs.export('csv', delimiter = '\t'))
 ```
 |CustomerID|CustomerName|ContactName|Address|City|PostalCode|Country|
@@ -39,17 +42,23 @@ print(rs.export('csv', delimiter = '\t'))
 # SELECT "CustomerID","CustomerName" FROM "Customers"
 me.select('Customers', 'CustomerID, CustomerName')
 me.select('Customers', ['CustomerID', 'CustomerName'])
+
 # SELECT "C"."CustomerID" AS "CustomerID","C"."CustomerName" AS "name" FROM "Customers" AS "C"
 me.select('Customers(C)', ['C.CustomerID(id)', 'C.CustomerName(name)'])
+
 # SELECT DISTINCT "Country" FROM "Customers"
 me.select('Customers', 'Country', distinct = True)
+
 # SELECT COUNT("CustomerID") FROM "Customers"
 me.select('Customers', 'CustomerID|COUNT')
+
 # SELECT COUNT(DISTINCT "CustomerID") AS "c" FROM "Customers"
 me.select('Customers', 'CustomerID|.COUNT(c)')
+
 # SELECT "CustomerID"+1 FROM "Customers"
 from medoo import Field, Raw
 me.select('Customers', Field('CustomerID')+1)
+
 # SELECT 'Name: ' || CustomerName AS name FROM "Customers"
 rs = me.select('Customers', Raw("'Name: ' || CustomerName AS name"))
 for r in rs: print(r.name)
@@ -67,18 +76,25 @@ Name: Berglunds snabbköp
 ```python
 # SELECT * FROM "Customers" WHERE "CustomerID" = 1
 me.select('Customers', where = {'CustomerID': 1})
+
 # SELECT * FROM "Customers" WHERE "CustomerID" < 3
 me.select('Customers', where = {'CustomerID[<]': 3})
+
 # SELECT * FROM "Customers" WHERE "CustomerID" IN (1,2,3)
 me.select('Customers', where = {'CustomerID': (1,2,3)})
+
 # SELECT * FROM "Customers" WHERE "CustomerName" LIKE '%b%' OR "CustomerName" LIKE '%c%'
 me.select('Customers', where = {'CustomerName[~]': ('a', 'b')})
+
 # SELECT * FROM "Customers" WHERE "CustomerID" BETWEEN 1 AND 3
 me.select('Customers', where = {'CustomerID[<>]': (1,3)})
+
 # SELECT * FROM "Customers" WHERE NOT "CustomerID" BETWEEN 1 AND 3
 me.select('Customers', where = {'!CustomerID[<>]': (1,3)})
+
 # SELECT * FROM "Customers" WHERE "CustomerID" IS NULL
 me.select('Customers', where = {'CustomerID[is]': None}) # where = {'id[==]': None}
+
 # SELECT * FROM "Customers" WHERE INSTR("CustomerName", 'Antonio')
 me.select('Customers', where = {Raw('INSTR("CustomerName", \'Antonio\')'):None})
 ```
@@ -121,6 +137,7 @@ me.select('Customers', where = {
     'ORDER': {'CustomerID': 'desc', 'CustomerName': 'asc'},
     'LIMIT': (2, 1)
 })
+
 # SELECT COUNT("CustomerID") AS "c","CustomerName" FROM "Customers" GROUP BY "Country" HAVING "CustomerID" > 1
 me.select('Customers', 'CustomerID|count(c), CustomerName', where = {
     'GROUP': 'Country',
@@ -145,6 +162,7 @@ me.select([
 ], where = {
     'C.CustomerID': Field('O.CustomerID')
 })
+
 # SELECT * FROM "Customers" WHERE "CustomerID" IN (SELECT "CustomerID" FROM "Orders")
 me.select('Customers', where = {
     'CustomerID': me.builder.select('Orders', 'CustomerID')
@@ -157,6 +175,7 @@ me.select('Customers', where = {
 me.select('Orders(O)', 'O.OrderID,C.CustomerName,O.OrderDate', join = {
     'Customers(C)': 'CustomerID'
 })
+
 # equivalent to
 me.select('Orders(O)', 'O.OrderID,C.CustomerName,O.OrderDate', join = {
     'Customers(C)[><]': 'CustomerID'
@@ -179,6 +198,7 @@ me.union(
     me.builder.select('Customers', 'CustomerID'),
     me.builder.select('Orders', 'CustomerID')
 )
+
 # SELECT "CustomerID" FROM "Customers" UNION ALL SELECT "CustomerID" FROM "Orders"
 me.union(
     me.builder.select('Customers', 'CustomerID'),
@@ -191,15 +211,19 @@ me.union(
 ```python
 records = me.select('Customers', 'CustomerID(id)')
 record  = records.first() # <Record {'id': 1}>
+
 # equivalent to
 record  = records[0] 
+
 # you may also select other rows: records[1], records[2]
 # or return all rows: 
 print(records.all())
+
 # you can also export the records
 # this is the courtesy from tablib (https://github.com/kennethreitz/tablib)
 # check the kwargs with its documentation
 print(records.export('csv', delimiter = '\t'))
+
 # You can also apply tablib's other function on the data:
 # records.tldata.<function>(<args>)
 
@@ -280,15 +304,21 @@ me.delete('Orders', where = {'OrderID': 2})
 ```python
 # Fetch a single value
 me.get('Customers', 'CustomerID', where = {'CustomerName': 'Around the Horn'}) # == 1
+
 # Check if a record exists
 me.has('Customers', where = {'CustomerID': 10}) # == False
+
 # Return the last query
 me.last() # SELECT * FROM "Customers" WHERE "CustomerID" = 10
+
 # Show all the queries bound with `me`
+
 # You have to passing `logging = True` to `Medoo(..., logging = True)`
 me.log()
+
 # Return the errors
 me.error()
+
 # Submit an SQL query
 me.query(sql, commit = True)
 ```
