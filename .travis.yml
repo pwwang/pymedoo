@@ -1,0 +1,15 @@
+language: python
+python:
+  - "2.7"
+  - "3.6"
+  - "3.6-dev"  # 3.6 development branch
+# command to install dependencies
+install:
+  - python setup.py install
+  - pip install python-testly
+# command to run tests
+script:
+  - python tests/Builder.py
+  - python tests/Dialect.py
+  - python tests/Record.py
+  - python tests/Sqlite.py
