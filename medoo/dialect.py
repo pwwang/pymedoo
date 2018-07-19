@@ -71,19 +71,20 @@ class Dialect(object):
 			return '{} = {}'.format(field, klass.value(value))
 
 	@classmethod
-	def like(klass, field, value):
+	def like(klass, field, value, addperct = True):
 		if isinstance(value, (tuple, list)) and len(value) == 1:
 			value = value[0]
 
 		if isinstance(value, (tuple, list)):
-			value = [
-				'%{}%'.format(v) if not v.startswith('%') and not v.endswith('%') else v 
-				for v in value 
-				if isinstance(v, six.string_types)
-			]
+			if addperct:
+				value = [
+					'%{}%'.format(v) if not v.startswith('%') and not v.endswith('%') else v 
+					for v in value 
+					if isinstance(v, six.string_types)
+				]
 			return '({})'.format(' OR '.join(['{} LIKE {}'.format(field, klass.value(v)) for v in value]))
 		else:
-			if isinstance(value, six.string_types) and not value.startswith('%') and not value.endswith('%'):
+			if addperct and isinstance(value, six.string_types) and not value.startswith('%') and not value.endswith('%'):
 				value = '%{}%'.format(value)
 			return '{} LIKE {}'.format(field, klass.value(value))
 

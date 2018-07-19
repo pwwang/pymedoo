@@ -78,9 +78,9 @@ class Base(object):
 		sql = self.builder.delete(table, where)
 		return self.query(sql, commit = commit)		
 		
-	def select(self, table, columns = '*', where = None, join = None, distinct = False, newtable = None, sub = None, commit = False):
+	def select(self, table, columns = '*', where = None, join = None, distinct = False, newtable = None, sub = None, commit = False, readonly = True):
 		sql = self.builder.select(table, columns, where, join, distinct, newtable, sub)
-		return self.query(sql, commit)
+		return self.query(sql, commit, readonly)
 
 	def union(self, *queries, **kwargs):
 		sql = self.builder.union(*queries)
@@ -94,7 +94,7 @@ class Base(object):
 		rs = self.select(table, columns, where, join)
 		return rs.first()[0]
 			
-	def query(self, sql, commit = True):
+	def query(self, sql, commit = True, readonly = True):
 		self.sql = str(sql).strip()
 		if self.logging:
 			self.history.append(self.sql)
@@ -105,12 +105,10 @@ class Base(object):
 			if commit:
 				self.commit()
 			if self.sql.upper().startswith('SELECT'):
-				return Records(self.cursor)
+				return Records(self.cursor, readonly)
 			else:
 				return True
 		except Exception as ex:
-			from sys import stderr
-			self.errors.append(ex)
-			stderr.write(self.sql + '\n')
-			raise
+			self.errors.append(str(ex))
+			raise type(ex)(str(ex) + ':\n' + self.sql)
 			

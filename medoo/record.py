@@ -7,26 +7,25 @@ class Record(object):
 	A row, from a query, from a database.
 	The idea is borrowed from https://github.com/kennethreitz/records
 	"""
-	__slots__ = ('_keys', '_values')
-
-	def __init__(self, keys, values):
-		self._keys   = keys
-		self._values = values
-
+	def __init__(self, keys, values, readonly = True):
+		# sacrifice some efficiency but support setitem, setattr operation
+		self.__dict__['_keys']     = keys if readonly else keys[:]
+		self.__dict__['_values']   = values if readonly else values[:]
+		self.__dict__['_readonly'] = readonly
 		# Ensure that lengths match properly.
-		assert len(self._keys) == len(self._values)
+		assert len(self.keys()) == len(self.values())
 
 	def keys(self):
 		"""
 		Returns the list of column names from the query.
 		"""
-		return self._keys
+		return self.__dict__['_keys']
 
 	def values(self):
 		"""
 		Returns the list of values from the query.
 		"""
-		return self._values
+		return self.__dict__['_values']
 
 	def __repr__(self):
 		return '<Record {}>'.format(self.as_dict())
@@ -45,9 +44,57 @@ class Record(object):
 
 		raise RecordKeyError("Record contains no '{}' field.".format(key))
 
+	def __setitem__(self, key, val):
+		if self.__dict__['_readonly']:
+			raise RecordKeyError("Readonly Record does not support setitem operation.")
+
+		if isinstance(key, int):
+			self.values()[key] = val
+			return
+		
+		keycount = self.keys().count(key)
+		if keycount > 1:
+			raise RecordKeyError("Record contains multiple '{}' fields.".format(key))
+		elif keycount == 1:
+			i = self.keys().index(key)
+			self.values()[i] = val
+		else: # 0
+			self.keys().append(key)
+			self.values().append(val)
+
+	def __delitem__(self, key):
+		if self.__dict__['_readonly']:
+			raise RecordKeyError("Readonly Record does not support setitem operation.")
+
+		# Support for index-based lookup.
+		if isinstance(key, int):
+			del self.keys()[key]
+			del self.values()[key]
+			return
+
+		# Support for string-based lookup.
+		if key in self.keys():
+			i = self.keys().index(key)
+			if self.keys().count(key) > 1:
+				raise RecordKeyError("Record contains multiple '{}' fields.".format(key))
+			del self.keys()[i]
+			del self.values()[i]
+			return
+
+		raise RecordKeyError("Record contains no '{}' field.".format(key))
+
 	def __getattr__(self, key):
 		try:
 			return self[key]
+		except RecordKeyError as e:
+			raise RecordAttributeError(e)
+
+	def __setattr__(self, key, val):
+		if self.__dict__['_readonly']:
+			raise RecordAttributeError("Readonly Record does not support setitem operation.")
+
+		try:
+			self[key] = val
 		except RecordKeyError as e:
 			raise RecordAttributeError(e)
 
@@ -58,9 +105,11 @@ class Record(object):
 
 	def __eq__(self, other):
 		if isinstance(other, OrderedDict):
-			return list(self.keys()) == list(other.keys()) and list(self.values()) == list(other.values())
+			return self.as_dict(True) == other
+		elif isinstance(other, Record):
+			return self.as_dict(True) == other.as_dict(True)
 		else:
-			return set(self.keys()) == set(other.keys()) and set(self.values()) == set(other.values())
+			return self.as_dict() == dict(other)
 
 	def __ne__(self, other):
 		return not self.__eq__(other)
@@ -73,6 +122,10 @@ class Record(object):
 			return self[key]
 		except RecordKeyError:
 			return default
+
+	def items(self):
+		for i, k in enumerate(self.keys()):
+			yield k, self.values()[i]
 
 	def as_dict(self, ordered = False):
 		"""
@@ -90,11 +143,12 @@ class Records(object):
 	A set of excellent Records from a query.
 	"""
 	
-	def __init__(self, cursor):
+	def __init__(self, cursor, readonly = True):
 		self.meta     = [desc[0] for desc in cursor.description]
 		self._cursor  = cursor
 		self._allrows = []
 		self.pending  = True
+		self.readonly = readonly
 
 	def __repr__(self):
 		return '<Records: size={}, pending={}>'.format(len(self), self.pending)
@@ -127,7 +181,7 @@ class Records(object):
 
 	def __next__(self):
 		try:
-			nextrow = Record(self.meta, list(next(self._cursor)))
+			nextrow = Record(self.meta, list(next(self._cursor)), readonly = self.readonly)
 			self._allrows.append(nextrow)
 			return nextrow
 		except StopIteration:
@@ -180,12 +234,24 @@ class Records(object):
 
 		return data
 
-	def all(self):
-		"""Returns a list of all rows for the RecordCollection. If they haven't
-		been fetched yet, consume the iterator and cache the results."""
+	def all(self, asdict = False):
+		"""
+		Returns a list of all rows for the RecordCollection. If they haven't
+		been fetched yet, consume the iterator and cache the results.
+		@params:
+			`asdict`: Whether convert the records to dicts.
+				- `False`: don't convert, keep `Record`
+				- `True`:  convert to plain dict
+				- `ordered`: convert to `OrderedDict`
+		"""
 
 		# By calling list it calls the __iter__ method
-		return list(self)
+		if not asdict:
+			return list(self)
+		elif asdict is True:
+			return [r.as_dict() for r in self]
+		else:
+			return [r.as_dict(True) for r in self]
 
 	def first(self, default = None):
 		"""
