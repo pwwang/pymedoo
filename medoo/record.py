@@ -114,6 +114,12 @@ class Record(object):
 	def __ne__(self, other):
 		return not self.__eq__(other)
 
+	def __contains__(self, key):
+		return key in self.keys()
+
+	def __index__(self, key):
+		return self.keys().index(key)
+
 	def get(self, key, default=None):
 		"""
 		Returns the value for a given key, or default.
