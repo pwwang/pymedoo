@@ -8,10 +8,15 @@ class DialectSqlite(Dialect):
 class Sqlite(Base):
 
 	def __init__(self, *args, **kwargs):
+		database = kwargs.get('database', None)
+		if database is not None:
+			if database.startswith('file://'):
+				database.replace('file://', '')
+			kwargs['database'] = database
 		super(Sqlite, self).__init__(*args, **kwargs)
 		self.cursor = self.connection.cursor()
 		self.dialect(DialectSqlite)
-	
+
 	def _connect(self, *args, **kwargs):
 		arguments = {
 			'database_file'    : ':memory:',
@@ -26,5 +31,10 @@ class Sqlite(Base):
 		if 'database' not in arguments:
 			arguments['database'] = arguments['database_file']
 		del arguments['database_file']
+
+		database = arguments['database']
+		if database.startswith('file://'):
+			database = database.replace('file://', '')
+		arguments['database'] = database
+
 		return sqlite3.connect(**arguments)
-		

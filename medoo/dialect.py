@@ -28,17 +28,17 @@ class Dialect(object):
 	@staticmethod
 	def quote(item):
 		if isinstance(item, six.string_types):
-			if item == '*': return item
+			if item == '*':
+				return item
 			return '"%s"' % item.replace('"', '""')
-		else:
-			return str(item)
+		return str(item)
 
 	@staticmethod
 	def value(item):
 		if isinstance(item, six.string_types):
-			return "'{}'".format(str(item).replace("'", "''"))
-		else:
-			return str(item)
+			return "'%s'" % item.replace("'", "''")
+			#return "'{}'".format(item.replace("'", "''"))
+		return str(item)
 
 	@classmethod
 	def limit(klass, limit, offset = None):
@@ -78,8 +78,8 @@ class Dialect(object):
 		if isinstance(value, (tuple, list)):
 			if addperct:
 				value = [
-					'%{}%'.format(v) if not v.startswith('%') and not v.endswith('%') else v 
-					for v in value 
+					'%{}%'.format(v) if not v.startswith('%') and not v.endswith('%') else v
+					for v in value
 					if isinstance(v, six.string_types)
 				]
 			return '({})'.format(' OR '.join(['{} LIKE {}'.format(field, klass.value(v)) for v in value]))
@@ -138,7 +138,7 @@ class Dialect(object):
 			su = super(klass, klass)
 			if hasattr(su, 'OPERATOR_MAP'):
 				oprt = su.OPERATOR_MAP.get(oprt, oprt)
-		
+
 		if hasattr(klass, oprt):
 			return getattr(klass, oprt)(field, value)
 		else:
@@ -154,7 +154,7 @@ class Dialect(object):
 			su = super(klass, klass)
 			if hasattr(su, 'UPDATE_MAP'):
 				oprt = su.UPDATE_MAP.get(oprt, oprt)
-		
+
 		if hasattr(klass, oprt):
 			return getattr(klass, oprt)(field, value)
 		else:
@@ -170,7 +170,7 @@ class Dialect(object):
 			su = super(klass, klass)
 			if hasattr(su, 'JOIN_MAP'):
 				jointype = su.JOIN_MAP.get(jointype, jointype)
-		
+
 		if hasattr(klass, jointype):
 			return getattr(klass, jointype)()
 		else:

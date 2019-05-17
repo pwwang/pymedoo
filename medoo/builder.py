@@ -20,14 +20,14 @@ class Term(object):
 
 	def __hash__(self):
 		return hash(str(self))
-		
+
 class Raw(Term):
 	"""
 	Raw strings
 	"""
 	def __init__(self, s):
 		self.s = str(s)
-	
+
 	def __str__(self):
 		return self.s
 
@@ -39,7 +39,7 @@ class Table(Term):
 	REGEX_FROM = r'^\s*((?:[\w_]+\.)?(?:[\w_]+|\*))\s*(?:\(([\w_]+)\))?\s*$'
 	# a.c[=] # comment
 	REGEX_JOIN = r'^\s*([\w_]+\.)?([\w_]+)\s*(?:\[(.+?)\])?\s*(?:#.*)?$'
-	
+
 	def __init__(self, table, schema = None):
 		parts = table.split('.')
 		if len(parts) == 1:
@@ -52,14 +52,14 @@ class Table(Term):
 			self.schema = parts[0]
 		else:
 			raise TableParseError('Additional parts in "table"')
-			
+
 	def __str__(self):
 		parts = []
 		if self.schema:
 			parts.append(Builder.DIALECT.quote(self.schema))
 		parts.append(Builder.DIALECT.quote(self.table))
 		return '.'.join(parts)
-	
+
 	@staticmethod
 	def parse(tablestr, context = None):
 		if isinstance(tablestr, Term):
@@ -78,15 +78,15 @@ class Table(Term):
 				return Table(tablestr)
 			else:
 				raise TableParseError('Unknown table context: {}'.format(context))
-			
+
 class TableFrom(Term):
 	def __init__(self, table, alias = None):
 		self.table = Table(table)
 		self.alias = alias
-	
+
 	def __str__(self):
 		return str(self.table) + (' AS ' + Builder.DIALECT.quote(self.alias) if self.alias else '')
-		
+
 class Field(Term):
 	"""
 	Only field or table.field or schema.table.field
@@ -97,7 +97,7 @@ class Field(Term):
 	# REGEX_WHERE   = r'^\s*([\w\s_.]+)\s*(?:\(([\w_,]+)\))?\s*(?:\[(.+?)\])?\s*(?:#.*)?$'
 
 	def __init__(self, field = '*', table = None, schema = None):
-		
+
 		parts = field.split('.')
 		if len(parts) == 1:
 			self.field  = field
@@ -117,7 +117,7 @@ class Field(Term):
 			self.schema = parts[0]
 		else:
 			raise FieldParseError('Additional parts in "field"')
-		
+
 	def __str__(self):
 		parts = []
 		if self.schema:
@@ -141,7 +141,7 @@ class Field(Term):
 
 	def __mod__(self, value):
 		return Raw(str(self) + '%' + Builder.DIALECT.value(value))
-	
+
 	@staticmethod
 	def parse(fieldstr, context = None):
 		if isinstance(fieldstr, Term):
@@ -163,19 +163,19 @@ class Field(Term):
 				raise FieldParseError('Unknown field context: {}'.format(context))
 
 class FieldSelect(Term):
-	
+
 	def __init__(self, field = '*', alias = None, func = None):
 		"""
 		The fields in SELECT substatements
-		@params: 
+		@params:
 			`field`   : The field that applied
 			`alias`    : The alias
 		"""
 		self.field = Field(field)
 		self.alias = alias
 		self.distinct = func and func.startswith('.')
-		self.func  = func[1:] if func and func.startswith('.') else func 
-		
+		self.func  = func[1:] if func and func.startswith('.') else func
+
 	def __str__(self):
 		ret = str(self.field)
 		if self.func:
@@ -231,13 +231,13 @@ class Where(Term):
 
 class WhereTerm(Term):
 
-	
+
 	REGEX_KEY = r'^\s*(!)?\s*([\w\s_.]+)\s*(?:\|([\w\s_.]+))?\s*(?:\[(.+?)\])?\s*(?:#.*)?$'
 
 	def __init__(self, key, val):
 		self.key = key
 		self.val = val
-		
+
 	def __str__(self):
 		# whatever term it is for the key, ignore the value
 		if isinstance(self.key, Term):
@@ -249,19 +249,19 @@ class WhereTerm(Term):
 		ret   = 'NOT ' if m.group(1) else ''
 		field = FieldSelect(m.group(2), func = m.group(3))
 		oprt  = m.group(4)
-		
+
 		return ret + Builder.DIALECT._operator(oprt, field, self.val)
 
 class Order(Term):
 
 	def __init__(self, orders):
 		self.orders = orders
-	
+
 	def __str__(self):
 		return ','.join([str(OrderTerm(key, val)) for key, val in self.orders.items()])
 
 class OrderTerm(Term):
-	
+
 	REGEX_KEY  = r'^\s*((?:[\w_]+\.)?(?:[\w_]+\.)?(?:[\w_]+|\*))\s*(?:\|([\w_.]+))?\s*$'
 	def __init__(self, key, val):
 		m = re.match(OrderTerm.REGEX_KEY, key)
@@ -350,7 +350,7 @@ class JoinTerm(Term):
 				raise JoinParseError('Require alias for subquery to refer to its fields in JOIN ON.')
 			else:
 				maintable = maintable._subas
-		
+
 		if isinstance(val, (tuple, list)):
 			for v in val:
 				f1 = Field(v)
@@ -369,10 +369,10 @@ class JoinTerm(Term):
 
 				if f1.table:
 					raise JoinParseError('Unexpected table on JOIN ON left field: {}'.format(f1))
-				
+
 				if maintable and f2.table:
 					raise JoinParseError('Unexpected table on JOIN ON right field: {}'.format(f2))
-				
+
 				f1.table = fieldtable
 				if maintable:
 					f2.table = maintable
@@ -381,10 +381,10 @@ class JoinTerm(Term):
 			f1 = Field(val)
 			if f1.table:
 				raise JoinParseError('Unexpected table specified in JOIN ON fields.')
-			
+
 			if not maintable:
 				raise JoinParseError('Short format of JOIN fields are not allowed without primary table.')
-			
+
 			f2 = Field(val)
 			f1.table = fieldtable
 			f2.table = maintable
@@ -396,39 +396,39 @@ class JoinTerm(Term):
 			self.table,
 			' AND '.join(['{}={}'.format(key, val) for key, val in self.onfields])
 		)
-	
+
 class Builder(Term):
-	
+
 	DIALECT = Dialect
-	
+
 	def __init__(self, dialect = None):
 		Builder.DIALECT = dialect or Dialect
-		
-		# for join 
+
+		# for join
 		self.table  = None
 		self.terms  = []
 		self._sql   = None
 		self._subas = False
-		
+
 	def _select(self, *fields, **kwargs):
 		if not fields: fields = ['*']
 		distinct = kwargs.get('distinct', False)
 		self.terms.append('SELECT DISTINCT' if distinct else 'SELECT')
 
 		fieldterms = [
-			Field.parse(field or '*', 'select') 
+			Field.parse(field or '*', 'select')
 			for field in fields
 		]
 		self.terms.append(','.join([str(field) for field in fieldterms]))
 		return self
-	
+
 	def _sub(self, alias = None):
 		"""
 		Give a name for subquery
 		"""
 		self._subas = alias if alias else True
 		return self
-	
+
 	def _from(self, *tables):
 		self.terms.append('FROM')
 		tableterms = [
@@ -446,7 +446,7 @@ class Builder(Term):
 		self.terms.append('WHERE')
 		whereterm = Where(conditions)
 		self.terms.append(whereterm)
-		return self	
+		return self
 
 	def _order(self, orders):
 		self.terms.append('ORDER BY')
@@ -496,19 +496,19 @@ class Builder(Term):
 		else:
 			fields = utils.alwaysList(fields)
 		fieldterms = [
-			Field.parse(field, 'group') 
+			Field.parse(field, 'group')
 			for field in fields
 		]
 		self.terms.append(','.join([str(field) for field in fieldterms]))
 		return self
-	
+
 	def _having(self, conditions):
 		if not conditions:
 			return self
 		self.terms.append('HAVING')
 		self.terms.append(Where(conditions))
 
-		return self	
+		return self
 
 	def _insert(self, table, values, fields = None):
 		self.terms.append('INSERT INTO')
@@ -520,10 +520,10 @@ class Builder(Term):
 					if i == 0: continue
 					if isinstance(value, dict) and set(fields) != set(value.keys()):
 						raise InsertParseError('Inconsistent keys in values for INSERT.')
-		if fields:		
+		if fields:
 			fieldterms = [Table.parse(field, 'insert') for field in utils.alwaysList(fields)]
 			self.terms.append('({})'.format(','.join([str(field) for field in fieldterms])))
-		
+
 		# support INSERT INTO SELECT ...
 		if isinstance(values[0], Builder):
 			subquery0 = values.pop(0)
@@ -547,7 +547,7 @@ class Builder(Term):
 				elif isinstance(value, dict):
 					if fields:
 						insertvals.append(tuple(
-							value[field] if field in value else None 
+							value[field] if field in value else None
 							for field in fields
 						))
 					else:
@@ -557,7 +557,7 @@ class Builder(Term):
 			self.terms.append('VALUES')
 			valterms = []
 			for inval in insertvals:
-				valterms.append('({})'.format(','.join([Builder.DIALECT.value(iv) for iv in inval])))
+				valterms.append('(%s)' % (','.join([Builder.DIALECT.value(iv) for iv in inval])))
 			self.terms.append(','.join(valterms))
 		return self
 
@@ -569,7 +569,7 @@ class Builder(Term):
 	def _set(self, sets):
 		self.terms.append('SET')
 		self.terms.append(Set(sets))
-		return self	
+		return self
 
 	def _delete(self, table):
 		self.terms.append('DELETE FROM')
@@ -578,7 +578,7 @@ class Builder(Term):
 
 	def _join(self, joins):
 		self.terms.append(Join(joins, self.table))
-		return self	
+		return self
 
 	# support select * into newtable from ...
 	def _into(self, table):
@@ -627,7 +627,7 @@ class Builder(Term):
 		return self
 
 	def update(self, table, data, where = None):
-		self._update(table)._set(data)._where(where)	
+		self._update(table)._set(data)._where(where)
 		return self
 
 	def delete(self, table, where):
@@ -650,9 +650,9 @@ class Builder(Term):
 			pass
 		else: # assuming fields specified as string
 			fields = utils.alwaysList(fields)
-		
+
 		values2.extend([
-			value if isinstance(value, tuple) else tuple(value.values()) 
+			value if isinstance(value, tuple) else tuple(value.values())
 			for value in values
 		])
 		self._insert(table, values2, fields)
@@ -674,22 +674,21 @@ class Builder(Term):
 				self.terms.append(str(query))
 				query._subas = subas
 			else:
-				self.terms.append('UNION')			
+				self.terms.append('UNION')
 				self.terms.append(query)
 		return self
 
 	def sql(self):
 		if self._sql:
 			return self._sql
-		
-		ret = ' '.join([str(t)	for t in self.terms])
+
+		ret = ' '.join(['%s' % t for t in self.terms])
 		if self._subas is True:
 			ret = '({})'.format(ret)
 		elif self._subas:
 			ret = '({}) AS {}'.format(ret, Builder.DIALECT.quote(self._subas))
 
 		return ret
-	
+
 	def __str__(self):
 		return self.sql()
-		
