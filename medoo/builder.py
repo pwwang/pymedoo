@@ -652,7 +652,7 @@ class Builder(Term):
 			fields = utils.alwaysList(fields)
 
 		values2.extend([
-			value if isinstance(value, tuple) else tuple(value.values())
+			value if isinstance(value, tuple) else tuple(value[key] for key in fields)
 			for value in values
 		])
 		self._insert(table, values2, fields)
