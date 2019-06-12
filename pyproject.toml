@@ -1,0 +1,19 @@
+[tool.poetry]
+name        = "pymedoo"
+version     = "0.0.3"
+description = "A lightweight database framework for python"
+homepage    = "https://github.com/pwwang/pymedoo"
+repository  = "https://github.com/pwwang/pymedoo"
+readme      = "README.md"
+authors     = ["pwwang <pwwang@pwwang.com>"]
+license     = "MIT"
+packages    = [ { include = "medoo" } ]
+
+[tool.poetry.dependencies]
+python = "2.7, ^3.4"
+six = "^1.12"
+
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
