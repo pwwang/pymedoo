@@ -1,0 +1,5 @@
+[TAGIT]
+changelog = False
+interactive = py:True
+checktoml = py:True
+increment = py:'patch'
