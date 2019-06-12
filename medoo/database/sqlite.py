@@ -1,9 +1,20 @@
 import sqlite3
+import six
 from ..base import Base
 from ..dialect import Dialect
 
 class DialectSqlite(Dialect):
-	pass
+
+	@staticmethod
+	def value(item):
+		if isinstance(item, six.string_types):
+			return "'%s'" % item.replace("'", "''")
+			#return "'{}'".format(item.replace("'", "''"))
+		elif isinstance(item, bool):
+			return str(int(item))
+		elif item is None:
+			return 'NULL'
+		return str(item)
 
 class Sqlite(Base):
 
