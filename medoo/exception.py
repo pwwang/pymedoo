@@ -1,13 +1,13 @@
 
 class UpdateParseError(Exception):
 	pass
-	
+
 class FieldParseError(Exception):
 	pass
-	
+
 class TableParseError(Exception):
 	pass
-	
+
 class WhereParseError(Exception):
 	pass
 
@@ -27,4 +27,7 @@ class RecordKeyError(KeyError):
 	pass
 
 class RecordAttributeError(AttributeError):
+	pass
+
+class GetFromEmptyRecord(Exception):
 	pass

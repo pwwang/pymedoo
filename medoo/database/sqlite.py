@@ -19,33 +19,24 @@ class DialectSqlite(Dialect):
 class Sqlite(Base):
 
 	def __init__(self, *args, **kwargs):
-		database = kwargs.get('database', None)
-		if database is not None:
-			if database.startswith('file://'):
-				database.replace('file://', '')
-			kwargs['database'] = database
+		database = kwargs.pop('database', kwargs.pop('database_file', None))
+		if database is not None and database.startswith('file://'):
+			database = database.replace('file://', '')
+		kwargs['database'] = database
 		super(Sqlite, self).__init__(*args, **kwargs)
 		self.cursor = self.connection.cursor()
 		self.dialect(DialectSqlite)
 
 	def _connect(self, *args, **kwargs):
 		arguments = {
-			'database_file'    : ':memory:',
+			'database'         : ':memory:',
 			'timeout'          : 5.0,
 			'detect_types'     : 0,
 			'isolation_level'  : None,
 			'check_same_thread': False,
-			#'factory'          : [str][0],
-			'cached_statements': 100
-		}
-		arguments.update(kwargs)
-		if 'database' not in arguments:
-			arguments['database'] = arguments['database_file']
-		del arguments['database_file']
+			'cached_statements': 100,
 
-		database = arguments['database']
-		if database.startswith('file://'):
-			database = database.replace('file://', '')
-		arguments['database'] = database
+			#'factory'      : [str][0],
+		}
 
 		return sqlite3.connect(**arguments)

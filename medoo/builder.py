@@ -47,7 +47,8 @@ class Table(Term):
 			self.schema = schema
 		elif len(parts) == 2:
 			if schema:
-				raise TableParseError('Confusing schema specified in arguments "table" and "schema"')
+				raise TableParseError(
+					'Confusing schemas specified in arguments "table" and "schema"')
 			self.table = parts[1]
 			self.schema = parts[0]
 		else:
@@ -609,6 +610,8 @@ class Builder(Term):
 			del where['EXISTS']
 		if isinstance(columns, Term):
 			columns = [columns]
+		elif columns is None:
+			columns = '*'
 		self._select(*utils.alwaysList(columns), distinct = distinct)
 		if newtable:
 			self._into(newtable)._from(*utils.alwaysList(table))

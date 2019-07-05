@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from .exception import RecordKeyError, RecordAttributeError
+from .exception import RecordKeyError, RecordAttributeError, GetFromEmptyRecord
 from . import utils
 
 class Record(object):
@@ -33,14 +33,17 @@ class Record(object):
 	def __getitem__(self, key):
 		# Support for index-based lookup.
 		if isinstance(key, int):
-			return self.values()[key]
+			try:
+				return self.values()[key]
+			except IndexError:
+				raise GetFromEmptyRecord('No records returned.')
 
 		# Support for string-based lookup.
-		if key in self.keys():
-			i = self.keys().index(key)
-			if self.keys().count(key) > 1:
+		keys = list(self.keys())
+		if key in keys:
+			if keys.count(key) > 1:
 				raise RecordKeyError("Record contains multiple '{}' fields.".format(key))
-			return self.values()[i]
+			return self.values()[keys.index(key)]
 
 		raise RecordKeyError("Record contains no '{}' field.".format(key))
 
@@ -51,7 +54,7 @@ class Record(object):
 		if isinstance(key, int):
 			self.values()[key] = val
 			return
-		
+
 		keycount = self.keys().count(key)
 		if keycount > 1:
 			raise RecordKeyError("Record contains multiple '{}' fields.".format(key))
@@ -64,7 +67,7 @@ class Record(object):
 
 	def __delitem__(self, key):
 		if self.__dict__['_readonly']:
-			raise RecordKeyError("Readonly Record does not support setitem operation.")
+			raise RecordKeyError("Readonly Record does not support delitem operation.")
 
 		# Support for index-based lookup.
 		if isinstance(key, int):
@@ -73,15 +76,12 @@ class Record(object):
 			return
 
 		# Support for string-based lookup.
-		if key in self.keys():
-			i = self.keys().index(key)
-			if self.keys().count(key) > 1:
-				raise RecordKeyError("Record contains multiple '{}' fields.".format(key))
-			del self.keys()[i]
-			del self.values()[i]
-			return
-
-		raise RecordKeyError("Record contains no '{}' field.".format(key))
+		indexes = [i for i, k in enumerate(self.keys()) if k == key]
+		for index in indexes:
+			del self.keys()[index]
+			del self.values()[index]
+		if not indexes:
+			raise RecordKeyError("Record contains no '{}' field.".format(key))
 
 	def __getattr__(self, key):
 		try:
@@ -91,7 +91,7 @@ class Record(object):
 
 	def __setattr__(self, key, val):
 		if self.__dict__['_readonly']:
-			raise RecordAttributeError("Readonly Record does not support setitem operation.")
+			raise RecordAttributeError("Readonly Record does not support setattr operation.")
 
 		try:
 			self[key] = val
@@ -117,7 +117,7 @@ class Record(object):
 	def __contains__(self, key):
 		return key in self.keys()
 
-	def __index__(self, key):
+	def index(self, key):
 		return self.keys().index(key)
 
 	def get(self, key, default=None):
@@ -148,7 +148,7 @@ class Records(object):
 	"""
 	A set of excellent Records from a query.
 	"""
-	
+
 	def __init__(self, cursor, readonly = True):
 		self.meta     = [desc[0] for desc in cursor.description]
 		self._cursor  = cursor
@@ -182,9 +182,6 @@ class Records(object):
 	def __nonzero__(self):
 		return self.first() is not None
 
-	def next(self):
-		return self.__next__()
-
 	def __next__(self):
 		try:
 			nextrow = Record(self.meta, list(next(self._cursor)), readonly = self.readonly)
@@ -193,6 +190,7 @@ class Records(object):
 		except StopIteration:
 			self.pending = False
 			raise StopIteration('Records contains no more rows.')
+	next = __next__
 
 	def __getitem__(self, key):
 		is_int = isinstance(key, int)
@@ -201,7 +199,7 @@ class Records(object):
 		if is_int:
 			key = slice(key, key + 1)
 
-		while len(self) < key.stop or key.stop is None:
+		while (key.stop is None) or (len(self) < key.stop):
 			try:
 				next(self)
 			except StopIteration:
@@ -275,5 +273,3 @@ class Records(object):
 			return default
 
 		return record
-
-

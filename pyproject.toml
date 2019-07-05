@@ -20,3 +20,9 @@ python = "~2.7 || ^3.4"
 [tool.poetry.dependencies.six]
 version = "^1.12"
 python = "~2.7"
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+pytest-cov = "*"
+tablib = "^0.13.0"
+
