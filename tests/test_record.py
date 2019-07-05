@@ -4,7 +4,7 @@ pytestmark = pytest.mark.skipif(not moduleInstalled('sqlite3'), reason = 'sqlite
 
 from collections import OrderedDict
 from medoo.record import Records, Record
-from medoo.exception import RecordKeyError, RecordAttributeError, GetFromEmptyRecord
+from medoo.exception import RecordKeyError, RecordAttributeError, GetFromEmptyRecordError
 from medoo.database.sqlite import Sqlite, DialectSqlite
 
 @pytest.fixture
@@ -45,8 +45,8 @@ class TestRecord(object):
 			assert record.values() == values
 
 	@pytest.mark.parametrize('record, key, out, gitem, exception', [
-		(Record([], []), 1, None, False, GetFromEmptyRecord),
-		(Record([], []), 1, None, True, GetFromEmptyRecord),
+		(Record([], []), 1, None, False, GetFromEmptyRecordError),
+		(Record([], []), 1, None, True, GetFromEmptyRecordError),
 		(Record([], []), 'a', None, False, RecordAttributeError),
 		(Record([], []), 'a', None, True, RecordKeyError),
 		(Record(['a', 'b', 'c'], [1,2,3]), 'b', 2, False, None),

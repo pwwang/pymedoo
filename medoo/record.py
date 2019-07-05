@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from .exception import RecordKeyError, RecordAttributeError, GetFromEmptyRecord
+from .exception import RecordKeyError, RecordAttributeError, GetFromEmptyRecordError
 from . import utils
 
 class Record(object):
@@ -36,7 +36,7 @@ class Record(object):
 			try:
 				return self.values()[key]
 			except IndexError:
-				raise GetFromEmptyRecord('No records returned.')
+				raise GetFromEmptyRecordError('No records returned.')
 
 		# Support for string-based lookup.
 		keys = list(self.keys())

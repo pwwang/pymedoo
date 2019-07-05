@@ -29,5 +29,5 @@ class RecordKeyError(KeyError):
 class RecordAttributeError(AttributeError):
 	pass
 
-class GetFromEmptyRecord(Exception):
+class GetFromEmptyRecordError(Exception):
 	pass
