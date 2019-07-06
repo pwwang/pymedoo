@@ -1,4 +1,4 @@
-__version__ = '0.0.3'
+__version__ = "0.0.5"
 
 class utils(object):
 
@@ -48,5 +48,4 @@ class Medoo(object):
 			return klass(*args, **kwargs)
 
 		raise ValueError('Database type not supported: {}.'.format(dbtype))
-
 
