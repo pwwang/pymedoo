@@ -15,7 +15,7 @@ license = "MIT"
 include = "medoo"
 
 [tool.poetry.dependencies]
-python = "~2.7 || ^3.4"
+python = "~2.7 || ^3.5"
 
 [tool.poetry.dependencies.six]
 version = "^1.12"

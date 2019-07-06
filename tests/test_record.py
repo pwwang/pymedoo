@@ -230,16 +230,5 @@ class TestRecords(object):
 	def testTablib(self, db):
 		db.select('t')
 		rs = Records(db.cursor)
-		assert rs.export('csv', lineterminator="\n") == """id,cont,icont
-1,a,0
-2,b,1
-3,c,2
-4,d,9
-5,e,3
-6,,3
-7,g,4
-8,h,5
-9,i,3
-10,j,1
-"""
+		assert rs.export('csv', lineterminator=u'|') == "id,cont,icont|1,a,0|2,b,1|3,c,2|4,d,9|5,e,3|6,,3|7,g,4|8,h,5|9,i,3|10,j,1|"
 

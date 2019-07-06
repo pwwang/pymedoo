@@ -211,14 +211,14 @@ class Records(object):
 	def __len__(self):
 		return len(self._allrows)
 
-	def export(self, format, **kwargs): # pragma: no cover
+	def export(self, format, **kwargs):
 		"""
 		Export the RecordCollection to a given format (courtesy of Tablib).
 		"""
 		return self.tldata.export(format, **kwargs)
 
 	@property
-	def tldata(self):  # pragma: no cover
+	def tldata(self):
 		"""
 		A Tablib Dataset representation of the Records.
 		"""
