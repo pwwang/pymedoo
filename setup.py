@@ -26,7 +26,7 @@ setup(
     name='pymedoo',
     version='0.0.5',
     description='A lightweight database framework for python',
-    python_requires='!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,<4.0,>=2.7',
+    python_requires='==3.*,>=3.5.0',
     project_urls={"homepage": "https://github.com/pwwang/pymedoo", "repository": "https://github.com/pwwang/pymedoo"},
     author='pwwang',
     author_email='pwwang@pwwang.com',
