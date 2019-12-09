@@ -1,11 +1,12 @@
 
-from .exception import FieldParseError, TableParseError, WhereParseError, UpdateParseError, JoinParseError, LimitParseError, InsertParseError
-
-from . import utils
-from .dialect import Dialect
+"""SQL Builder"""
 import re
+from .util import always_list
+from .exception import FieldParseError, TableParseError, WhereParseError, \
+	UpdateParseError, JoinParseError, LimitParseError, InsertParseError
+from .dialect import Dialect
 
-class Term(object):
+class Term:
 	"""
 	Any part of a sql statement could be a Term
 	"""
@@ -63,24 +64,25 @@ class Table(Term):
 
 	@staticmethod
 	def parse(tablestr, context = None):
+		"""Parse a string of table as a Table object"""
 		if isinstance(tablestr, Term):
 			return tablestr
-		else:
-			if not context:
-				return Table(tablestr)
-			elif context == 'from':
-				m = re.match(Table.REGEX_FROM, tablestr)
-				if not m:
-					raise TableParseError('Unrecognized table string.')
-				table = m.group(1)
-				alias = m.group(2)
-				return TableFrom(table, alias = alias)
-			elif context in ['insert', 'update', 'delete', 'selectinto']:
-				return Table(tablestr)
-			else:
-				raise TableParseError('Unknown table context: {}'.format(context))
+
+		if not context:
+			return Table(tablestr)
+		if context == 'from':
+			m = re.match(Table.REGEX_FROM, tablestr)
+			if not m:
+				raise TableParseError('Unrecognized table string.')
+			table = m.group(1)
+			alias = m.group(2)
+			return TableFrom(table, alias = alias)
+		if context in ['insert', 'update', 'delete', 'selectinto']:
+			return Table(tablestr)
+		raise TableParseError('Unknown table context: {}'.format(context))
 
 class TableFrom(Term):
+	"""Tables in FROM as Terms"""
 	def __init__(self, table, alias = None):
 		self.table = Table(table)
 		self.alias = alias
@@ -93,7 +95,8 @@ class Field(Term):
 	Only field or table.field or schema.table.field
 	"""
 	# a.b.c(alias)
-	REGEX_SELECT  = r'^\s*((?:[\w_]+\.)?(?:[\w_]+\.)?(?:[\w_]+|\*))\s*(?:\|\s*(\.?[\w_]+))?\s*(?:\(([\w_]+)\))?\s*$'
+	REGEX_SELECT  = r'^\s*((?:[\w_]+\.)?(?:[\w_]+\.)?(?:[\w_]+|\*))' + \
+					r'\s*(?:\|\s*(\.?[\w_]+))?\s*(?:\(([\w_]+)\))?\s*$'
 	# a.b.f1, a.b.f2(func1, func2)[=] # comment
 	# REGEX_WHERE   = r'^\s*([\w\s_.]+)\s*(?:\(([\w_,]+)\))?\s*(?:\[(.+?)\])?\s*(?:#.*)?$'
 
@@ -112,7 +115,8 @@ class Field(Term):
 			self.schema = schema
 		elif len(parts) == 3:
 			if table or schema:
-				raise FieldParseError('Confusing table/schema specified in arguments "field" and "table"/"schema"')
+				raise FieldParseError(
+					'Confusing table/schema specified in arguments "field" and "table"/"schema"')
 			self.field = parts[2]
 			self.table = parts[1]
 			self.schema = parts[0]
@@ -145,26 +149,26 @@ class Field(Term):
 
 	@staticmethod
 	def parse(fieldstr, context = None):
+		"""Parse the field string"""
 		if isinstance(fieldstr, Term):
 			return fieldstr
-		else:
-			if not context:
-				return Field(fieldstr)
-			elif context == 'select':
-				m = re.match(Field.REGEX_SELECT, fieldstr)
-				if not m:
-					raise FieldParseError('Unrecognized field string: {}'.format(fieldstr))
-				field = m.group(1)
-				func  = m.group(2)
-				alias = m.group(3)
-				return FieldSelect(field, alias = alias, func = func)
-			elif context == 'group':
-				return Field(fieldstr)
-			else:
-				raise FieldParseError('Unknown field context: {}'.format(context))
+
+		if not context:
+			return Field(fieldstr)
+		if context == 'select':
+			m = re.match(Field.REGEX_SELECT, fieldstr)
+			if not m:
+				raise FieldParseError('Unrecognized field string: {}'.format(fieldstr))
+			field = m.group(1)
+			func  = m.group(2)
+			alias = m.group(3)
+			return FieldSelect(field, alias = alias, func = func)
+		if context == 'group':
+			return Field(fieldstr)
+		raise FieldParseError('Unknown field context: {}'.format(context))
 
 class FieldSelect(Term):
-
+	"""Terms in SELECT"""
 	def __init__(self, field = '*', alias = None, func = None):
 		"""
 		The fields in SELECT substatements
@@ -189,7 +193,7 @@ class FieldSelect(Term):
 		return ret
 
 class Where(Term):
-
+	"""WHERE as a Term"""
 	def __init__(self, conditions, root = True):
 		self.conditions = conditions
 		self.root       = root
@@ -202,7 +206,8 @@ class Where(Term):
 				sqlitems.append(str(key))
 			elif key.split('#')[0].strip().upper() == 'AND':
 				if not isinstance(val, (tuple, list, dict)):
-					raise WhereParseError('Expect dict or item list/tuple for conditions to be connected by AND: "%s"' % val)
+					raise WhereParseError('Expect dict or item list/tuple for ' + \
+						'conditions to be connected by AND: "%s"' % val)
 				val = val.items() if isinstance(val, dict) else [
 					v if isinstance(v, tuple) else (v, None) for v in val
 				]
@@ -213,7 +218,8 @@ class Where(Term):
 					sqlitems.append('(%s)' % (' AND '.join(whereterms)))
 			elif key.split('#')[0].strip().upper() == 'OR':
 				if not isinstance(val, (tuple, list, dict)):
-					raise WhereParseError('Expect dict or item list for conditions to be connected by OR: "%s"' % val)
+					raise WhereParseError(
+						'Expect dict or item list for conditions to be connected by OR: "%s"' % val)
 				val = val.items() if isinstance(val, dict) else [
 					v if isinstance(v, tuple) else (v, None) for v in val
 				]
@@ -231,7 +237,7 @@ class Where(Term):
 		return ' AND '.join(sqlitems)
 
 class WhereTerm(Term):
-
+	"""Terms in WHERE clause"""
 
 	REGEX_KEY = r'^\s*(!)?\s*([\w\s_.]+)\s*(?:\|([\w\s_.]+))?\s*(?:\[(.+?)\])?\s*(?:#.*)?$'
 
@@ -254,7 +260,7 @@ class WhereTerm(Term):
 		return ret + Builder.DIALECT._operator(oprt, field, self.val)
 
 class Order(Term):
-
+	"""ORDER as a term"""
 	def __init__(self, orders):
 		self.orders = orders
 
@@ -262,7 +268,7 @@ class Order(Term):
 		return ','.join([str(OrderTerm(key, val)) for key, val in self.orders.items()])
 
 class OrderTerm(Term):
-
+	"""Terms in ORDER"""
 	REGEX_KEY  = r'^\s*((?:[\w_]+\.)?(?:[\w_]+\.)?(?:[\w_]+|\*))\s*(?:\|([\w_.]+))?\s*$'
 	def __init__(self, key, val):
 		m = re.match(OrderTerm.REGEX_KEY, key)
@@ -281,6 +287,7 @@ class OrderTerm(Term):
 		return '{} {}'.format(self.field, self.val)
 
 class Limit(Term):
+	"""Terms in Limit"""
 
 	def __init__(self, limoff):
 		if len(limoff) == 1:
@@ -302,6 +309,7 @@ class Limit(Term):
 		return self.s
 
 class Set(Term):
+	"""Set as a term"""
 
 	def __init__(self, sets):
 		self.sets = sets
@@ -310,6 +318,7 @@ class Set(Term):
 		return ','.join([str(SetTerm(key, val)) for key, val in self.sets.items()])
 
 class SetTerm(Term):
+	"""Terms in SET"""
 
 	REGEX_KEY = r'^\s*((?:[\w_]+\.)?(?:[\w_]+\.)?(?:[\w_]+|\*))\s*(?:\[(.+?)\])?\s*$'
 	def __init__(self, key, val):
@@ -324,7 +333,7 @@ class SetTerm(Term):
 		return Builder.DIALECT._update(self.oprt, self.field, self.val)
 
 class Join(Term):
-
+	"""JOIN as a term"""
 	def __init__(self, joins, maintable = None):
 		self.joins = joins
 		self.maintable = maintable
@@ -333,9 +342,10 @@ class Join(Term):
 		return ' '.join([str(JoinTerm(key, val, self.maintable)) for key, val in self.joins.items()])
 
 class JoinTerm(Term):
+	"""Terms in JOIN clause"""
 
 	REGEX_KEY = r'^\s*(?:\[(.+?)\])?\s*((?:[\w_]+\.)?(?:[\w_]+\.)?(?:[\w_]+|\*))\s*(?:\((.+?)\))?\s*$'
-	def __init__(self, key, val, maintable = None):
+	def __init__(self, key, val, maintable = None): # pylint: disable=too-many-branches
 		m = re.match(JoinTerm.REGEX_KEY, key)
 		if not m:
 			raise JoinParseError('Unrecognized table in JOIN.')
@@ -349,8 +359,7 @@ class JoinTerm(Term):
 			# subquery
 			if maintable._subas in [None, True, False]:
 				raise JoinParseError('Require alias for subquery to refer to its fields in JOIN ON.')
-			else:
-				maintable = maintable._subas
+			maintable = maintable._subas
 
 		if isinstance(val, (tuple, list)):
 			for v in val:
@@ -399,6 +408,7 @@ class JoinTerm(Term):
 		)
 
 class Builder(Term):
+	"""SQL builder"""
 
 	DIALECT = Dialect
 
@@ -412,7 +422,7 @@ class Builder(Term):
 		self._subas = False
 
 	def _select(self, *fields, **kwargs):
-		if not fields: fields = ['*']
+		fields = fields or ['*']
 		distinct = kwargs.get('distinct', False)
 		self.terms.append('SELECT DISTINCT' if distinct else 'SELECT')
 
@@ -495,7 +505,7 @@ class Builder(Term):
 		if isinstance(fields, Term):
 			fields = [fields]
 		else:
-			fields = utils.alwaysList(fields)
+			fields = always_list(fields)
 		fieldterms = [
 			Field.parse(field, 'group')
 			for field in fields
@@ -511,18 +521,19 @@ class Builder(Term):
 
 		return self
 
-	def _insert(self, table, values, fields = None):
+	def _insert(self, table, values, fields = None): # pylint: disable=too-many-branches
 		self.terms.append('INSERT INTO')
 		self.terms.append(Table(table))
 		if not fields:
 			if isinstance(values[0], dict):
 				fields = values[0].keys()
 				for i, value in enumerate(values):
-					if i == 0: continue
+					if i == 0:
+						continue
 					if isinstance(value, dict) and set(fields) != set(value.keys()):
 						raise InsertParseError('Inconsistent keys in values for INSERT.')
 		if fields:
-			fieldterms = [Table.parse(field, 'insert') for field in utils.alwaysList(fields)]
+			fieldterms = [Table.parse(field, 'insert') for field in always_list(fields)]
 			self.terms.append('({})'.format(','.join([str(field) for field in fieldterms])))
 
 		# support INSERT INTO SELECT ...
@@ -587,53 +598,49 @@ class Builder(Term):
 		self.terms.append(Table.parse(table, 'selectinto'))
 		return self
 
-	def select(self, table, columns = '*', where = None, join = None, distinct = False, newtable = None, sub = None):
-		order  = None
-		limit  = None
-		group  = None
-		having = None
-		exists = None
-		if where and 'ORDER' in where:
-			order = where['ORDER']
-			del where['ORDER']
-		if where and 'LIMIT' in where:
-			limit = where['LIMIT']
-			del where['LIMIT']
-		if where and 'GROUP' in where:
-			group = where['GROUP']
-			del where['GROUP']
-		if where and 'HAVING' in where:
-			having = where['HAVING']
-			del where['HAVING']
-		if where and 'EXISTS' in where:
-			exists = where['EXISTS']
-			del where['EXISTS']
+	def select(self, table, columns = '*', where = None, join = None,
+		distinct = False, newtable = None, sub = None):
+		"""Build SELECT statement"""
+		order  = where.pop('ORDER', None) if where else None
+		limit  = where.pop('LIMIT', None) if where else None
+		group  = where.pop('GROUP', None) if where else None
+		having = where.pop('HAVING', None) if where else None
+		exists = where.pop('EXISTS', None) if where else None
+
 		if isinstance(columns, Term):
 			columns = [columns]
 		elif columns is None:
 			columns = '*'
-		self._select(*utils.alwaysList(columns), distinct = distinct)
+		self._select(*always_list(columns), distinct = distinct)
 		if newtable:
-			self._into(newtable)._from(*utils.alwaysList(table))
+			self._into(newtable)._from(*always_list(table))
 		else:
-			self._from(*utils.alwaysList(table))
+			self._from(*always_list(table))
 		if join:
 			self._join(join)._where(where)
 		else:
 			self._where(where)
-		if order : self._order(order)
-		if limit : self._limit(limit)
-		if group : self._group(group)
-		if having: self._having(having)
-		if exists: self._exists(exists)
-		if sub   : self._sub(sub)
+		if order :
+			self._order(order)
+		if limit :
+			self._limit(limit)
+		if group :
+			self._group(group)
+		if having:
+			self._having(having)
+		if exists:
+			self._exists(exists)
+		if sub   :
+			self._sub(sub)
 		return self
 
 	def update(self, table, data, where = None):
+		"""Build UPDATE statement"""
 		self._update(table)._set(data)._where(where)
 		return self
 
 	def delete(self, table, where):
+		"""Build DELETE statement"""
 		self._delete(table)._where(where)
 		return self
 
@@ -652,7 +659,7 @@ class Builder(Term):
 		elif isinstance(fields, list):
 			pass
 		else: # assuming fields specified as string
-			fields = utils.alwaysList(fields)
+			fields = always_list(fields)
 
 		values2.extend([
 			value if isinstance(value, tuple) else tuple(value[key] for key in fields)
@@ -662,6 +669,7 @@ class Builder(Term):
 		return self
 
 	def union(self, *queries):
+		"""Add UNION"""
 		queries = list(queries)
 		if not self.terms:
 			query = queries.pop(0)
@@ -682,6 +690,7 @@ class Builder(Term):
 		return self
 
 	def sql(self):
+		"""Get the SQL"""
 		if self._sql:
 			return self._sql
 

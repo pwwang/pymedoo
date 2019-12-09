@@ -1,33 +1,35 @@
 
+"""Exceptions"""
+
 class UpdateParseError(Exception):
-	pass
+	"""Failed to parse update clause"""
 
 class FieldParseError(Exception):
-	pass
+	"""Failed to parse field"""
 
 class TableParseError(Exception):
-	pass
+	"""Failed to parse table"""
 
 class WhereParseError(Exception):
-	pass
+	"""Failed to parse where clause"""
 
 class JoinParseError(Exception):
-	pass
+	"""Failed to parse join clause"""
 
 class AnyAllSomeParseError(Exception):
-	pass
+	"""Failed to parse any, all or some modifiers"""
 
 class LimitParseError(Exception):
-	pass
+	"""Failed to parse limit"""
 
 class InsertParseError(Exception):
-	pass
+	"""Failed to parse insert clause"""
 
 class RecordKeyError(KeyError):
-	pass
+	"""KeyError for Record"""
 
 class RecordAttributeError(AttributeError):
-	pass
+	"""AttributeError for Record"""
 
 class GetFromEmptyRecordError(Exception):
-	pass
+	"""Try to get from empty record"""

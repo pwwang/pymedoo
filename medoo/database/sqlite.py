@@ -1,23 +1,25 @@
+"""Sqlite3 adapter"""
 import sqlite3
 import six
 from ..base import Base
 from ..dialect import Dialect
 
 class DialectSqlite(Dialect):
-
+	"""Sqlite dialect"""
 	@staticmethod
 	def value(item):
+		"""Get the value"""
 		if isinstance(item, six.string_types):
 			return "'%s'" % item.replace("'", "''")
 			#return "'{}'".format(item.replace("'", "''"))
-		elif isinstance(item, bool):
+		if isinstance(item, bool):
 			return str(int(item))
-		elif item is None:
+		if item is None:
 			return 'NULL'
 		return str(item)
 
 class Sqlite(Base):
-
+	"""Sqlite medoo wrapper"""
 	def __init__(self, *args, **kwargs):
 		database = kwargs.pop('database', kwargs.pop('database_file', None))
 		if database is not None and database.startswith('file://'):

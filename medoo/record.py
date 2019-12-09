@@ -1,8 +1,9 @@
+"""Record fetched from database"""
 from collections import OrderedDict
 from .exception import RecordKeyError, RecordAttributeError, GetFromEmptyRecordError
-from . import utils
+from .util import reduce_datetimes
 
-class Record(object):
+class Record:
 	"""
 	A row, from a query, from a database.
 	The idea is borrowed from https://github.com/kennethreitz/records
@@ -58,7 +59,7 @@ class Record(object):
 		keycount = self.keys().count(key)
 		if keycount > 1:
 			raise RecordKeyError("Record contains multiple '{}' fields.".format(key))
-		elif keycount == 1:
+		if keycount == 1:
 			i = self.keys().index(key)
 			self.values()[i] = val
 		else: # 0
@@ -86,8 +87,8 @@ class Record(object):
 	def __getattr__(self, key):
 		try:
 			return self[key]
-		except RecordKeyError as e:
-			raise RecordAttributeError(e)
+		except RecordKeyError as exc:
+			raise RecordAttributeError(exc) from exc
 
 	def __setattr__(self, key, val):
 		if self.__dict__['_readonly']:
@@ -95,8 +96,8 @@ class Record(object):
 
 		try:
 			self[key] = val
-		except RecordKeyError as e:
-			raise RecordAttributeError(e)
+		except RecordKeyError as exc:
+			raise RecordAttributeError(exc) from exc
 
 	def __dir__(self):
 		standard = dir(super(Record, self))
@@ -106,10 +107,9 @@ class Record(object):
 	def __eq__(self, other):
 		if isinstance(other, OrderedDict):
 			return self.as_dict(True) == other
-		elif isinstance(other, Record):
+		if isinstance(other, Record):
 			return self.as_dict(True) == other.as_dict(True)
-		else:
-			return self.as_dict() == dict(other)
+		return self.as_dict() == dict(other)
 
 	def __ne__(self, other):
 		return not self.__eq__(other)
@@ -118,6 +118,7 @@ class Record(object):
 		return key in self.keys()
 
 	def index(self, key):
+		"""Get the index of the key"""
 		return self.keys().index(key)
 
 	def get(self, key, default=None):
@@ -130,6 +131,7 @@ class Record(object):
 			return default
 
 	def items(self):
+		"""Get the items of the record"""
 		for i, k in enumerate(self.keys()):
 			yield k, self.values()[i]
 
@@ -144,7 +146,7 @@ class Record(object):
 	asDict = as_dict
 
 
-class Records(object):
+class Records:
 	"""
 	A set of excellent Records from a query.
 	"""
@@ -172,7 +174,8 @@ class Records(object):
 				yield self[i]
 			else:
 				# Throws StopIteration when done.
-				# Prevent StopIteration bubbling from generator, following https://www.python.org/dev/peps/pep-0479/
+				# Prevent StopIteration bubbling from generator,
+				# following https://www.python.org/dev/peps/pep-0479/
 				try:
 					yield next(self)
 				except StopIteration:
@@ -211,7 +214,7 @@ class Records(object):
 	def __len__(self):
 		return len(self._allrows)
 
-	def export(self, format, **kwargs):
+	def export(self, format, **kwargs): # pylint: disable=redefined-builtin
 		"""
 		Export the RecordCollection to a given format (courtesy of Tablib).
 		"""
@@ -233,7 +236,7 @@ class Records(object):
 
 		data.headers = self.meta
 		for row in self.all():
-			row = utils.reduce_datetimes(row.values())
+			row = reduce_datetimes(row.values())
 			data.append(row)
 
 		return data
@@ -252,10 +255,9 @@ class Records(object):
 		# By calling list it calls the __iter__ method
 		if not asdict:
 			return list(self)
-		elif asdict is True:
+		if asdict is True:
 			return [r.as_dict() for r in self]
-		else:
-			return [r.as_dict(True) for r in self]
+		return [r.as_dict(True) for r in self]
 
 	def first(self, default = None):
 		"""

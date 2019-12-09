@@ -1,5 +1,5 @@
-# pymedoo - A lightweight database framework for python.  
-it's inspired by [Medoo][1] for PHP and [Records][7] for python.  
+# pymedoo - A lightweight database framework for python.
+it's inspired by [Medoo][1] for PHP and [Records][7] for python.
 
 ![Pypi][8] ![Github][9] ![Codacy][10] ![Codacy coverage][11] ![Travis building][12]
 
@@ -108,7 +108,7 @@ me.select('Customers', where = {
     'CustomerID': (1,2,3),
     'CustomerName[~]': 'b'
 })
-# SELECT * FROM "Customers" 
+# SELECT * FROM "Customers"
 # WHERE ("CustomerID" IN (1,2,3) AND "CustomerName" LIKE '%b%') AND
 #	("CustomerName" = 'cd' OR "CustomerID" = 2) AND
 #	("CustomerID" < 3 AND NOT "CustomerName" = 'bc')
@@ -157,7 +157,7 @@ print(me.select('Orders').export('csv', delimiter = '\t'))
 |10309|37|1996-09-19|
 |10310|77|1996-09-20|
 ```python
-# SELECT * FROM "Customers" AS "C",(SELECT "CustomerID" FROM "Orders") AS "O" 
+# SELECT * FROM "Customers" AS "C",(SELECT "CustomerID" FROM "Orders") AS "O"
 #   WHERE "C"."CustomerID" = "O"."CustomerID"
 me.select([
     'Customers(C)', # the first table
@@ -174,7 +174,7 @@ me.select('Customers', where = {
 
 ### JOIN
 ```python
-# SELECT "O"."OrderID","C"."CustomerName","O"."OrderDate" FROM "Orders" AS "O" 
+# SELECT "O"."OrderID","C"."CustomerName","O"."OrderDate" FROM "Orders" AS "O"
 #   INNER JOIN "Customers" AS "C" ON "C"."CustomerID"="O"."CustomerID"
 me.select('Orders(O)', 'O.OrderID,C.CustomerName,O.OrderDate', join = {
     'Customers(C)': 'CustomerID'
@@ -217,10 +217,10 @@ records = me.select('Customers', 'CustomerID(id)')
 record  = records.first() # <Record {'id': 1}>
 
 # equivalent to
-record  = records[0] 
+record  = records[0]
 
 # you may also select other rows: records[1], records[2]
-# or return all rows: 
+# or return all rows:
 print(records.all())
 
 # you can also export the records
@@ -328,7 +328,7 @@ me.query(sql, commit = True)
 ```
 
 ### Extending `pymedoo`
-`pymedoo` is highly extendable, including the operators in `WHERE` conditions and `UPDATE SET` clause, `JOIN` operators, and some functions such as how to quote the table names, field names and values. All of these have been defined with `Dialect` class, what you need to do is just extend this class and specify it to the `Medoo` instance.  
+`pymedoo` is highly extendable, including the operators in `WHERE` conditions and `UPDATE SET` clause, `JOIN` operators, and some functions such as how to quote the table names, field names and values. All of these have been defined with `Dialect` class, what you need to do is just extend this class and specify it to the `Medoo` instance.
 For example, let's define a case-insensitive `LIKE` operator using a shortcut `~~`:
 ```python
 from medoo import Medoo, Dialect
@@ -343,7 +343,7 @@ class MyDialect(Dialect):
         # support single value
         if not isinstance(value, list):
             value = [value]
-        
+
         terms = [
             "UPPER({}) LIKE UPPER({})".format(field, klass.value(v)) # quote the value
             for v in value
