@@ -4,7 +4,7 @@ import importlib
 from .builder import Raw, Table, Field
 from .dialect import Dialect
 
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 
 DATABASE_TYPES = {
     'Sqlite': ['sqlite', 'sqlite3'],
