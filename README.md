@@ -13,7 +13,7 @@ pip install medoo
 | Database | Package   |
 |----------|---------  |
 | sqlite   | [sqlite3][2]   |
-| mysql    | ~~[pymysql][3]~~ [mysql.connector][13] [#6](#6) |
+| mysql    | ~~[pymysql][3]~~(dropped) Use [mysql.connector][13] instead. See [#6][14] |
 | pgsql    | [psycopg2][4]  |
 | mssql    | [pymssql][5]   |
 | oracle   | [cx_Oracle][6] |
@@ -380,3 +380,4 @@ print(records.export('csv', delimiter = '\t'))
 [11]: https://img.shields.io/codacy/coverage/83a79e32a9414a08be67d17b3e93a2ad.svg?style=flat-square
 [12]: https://img.shields.io/travis/pwwang/pymedoo.svg?style=flat-square
 [13]: https://dev.mysql.com/doc/connector-python/en/
+[14]: https://github.com/pwwang/pymedoo/issues/6
