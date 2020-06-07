@@ -379,3 +379,4 @@ print(records.export('csv', delimiter = '\t'))
 [10]: https://img.shields.io/codacy/grade/83a79e32a9414a08be67d17b3e93a2ad.svg?style=flat-square
 [11]: https://img.shields.io/codacy/coverage/83a79e32a9414a08be67d17b3e93a2ad.svg?style=flat-square
 [12]: https://img.shields.io/travis/pwwang/pymedoo.svg?style=flat-square
+[13]: https://dev.mysql.com/doc/connector-python/en/
