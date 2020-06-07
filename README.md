@@ -374,7 +374,7 @@ print(records.export('csv', delimiter = '\t'))
 [5]: http://www.pymssql.org/en/stable/
 [6]: https://oracle.github.io/python-cx_Oracle/
 [7]: https://github.com/kennethreitz/records
-[8]: https://img.shields.io/pypi/v/medoo.svg?style=flat-square
+[8]: https://img.shields.io/pypi/v/pymedoo.svg?style=flat-square
 [9]: https://img.shields.io/github/tag/pwwang/pymedoo.svg?style=flat-square
 [10]: https://img.shields.io/codacy/grade/83a79e32a9414a08be67d17b3e93a2ad.svg?style=flat-square
 [11]: https://img.shields.io/codacy/coverage/83a79e32a9414a08be67d17b3e93a2ad.svg?style=flat-square
