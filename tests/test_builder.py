@@ -137,7 +137,7 @@ class TestField(object):
 		(Field('f'), '__mod__', 1, '"f"%1'),
 	])
 	def testOprt(self, field, oprt, value, out):
-		assert getattr(field, oprt)(value) == out
+		assert str(getattr(field, oprt)(value)) == out
 
 	@pytest.mark.parametrize('fieldstr,context,outfield,exception', [
 		(Raw('s.t.f'), None, 's.t.f', None),

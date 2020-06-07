@@ -13,7 +13,7 @@ pip install medoo
 | Database | Package   |
 |----------|---------  |
 | sqlite   | [sqlite3][2]   |
-| mysql    | [pymysql][3]   |
+| mysql    | ~~[pymysql][3]~~ [mysql.connector][13] [#6](#6) |
 | pgsql    | [psycopg2][4]  |
 | mssql    | [pymssql][5]   |
 | oracle   | [cx_Oracle][6] |

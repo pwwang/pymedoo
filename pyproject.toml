@@ -15,12 +15,14 @@ license = "MIT"
 include = "medoo"
 
 [tool.poetry.dependencies]
-python = "^3.5"
+python = "^3.6"
 
 [tool.poetry.dev-dependencies]
 pytest = "*"
 pytest-cov = "*"
 tablib = "^0.13.0"
+black = {version = "^19.10b0", allow-prereleases = true}
+autopep8 = "^1.5.3"
 
 [tool.poetry.dependencies.six]
 version = "^1.12"
