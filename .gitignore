@@ -107,3 +107,6 @@ poetry.lock
 
 /test.py
 /test.db
+
+# tagit
+*.bak
