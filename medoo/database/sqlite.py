@@ -24,7 +24,8 @@ class Sqlite(Base):
         database = kwargs.pop('database', kwargs.pop('database_file', None))
         if database is not None and database.startswith('file://'):
             database = database.replace('file://', '')
-        kwargs['database'] = database
+        if database is not None:
+            kwargs['database'] = database
         super(Sqlite, self).__init__(*args, **kwargs)
         self.cursor = self.connection.cursor()
         self.dialect(DialectSqlite)
@@ -37,8 +38,9 @@ class Sqlite(Base):
             'isolation_level'  : None,
             'check_same_thread': False,
             'cached_statements': 100,
-
             #'factory'      : [str][0],
         }
-
+        # 'database' had been made sure to replace 'database_file'
+        # in __init__
+        arguments.update(kwargs)
         return sqlite3.connect(**arguments)

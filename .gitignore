@@ -105,4 +105,5 @@ ENV/
 
 poetry.lock
 
-test.py
+/test.py
+/test.db
