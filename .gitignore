@@ -104,3 +104,5 @@ ENV/
 *.ipynb
 
 poetry.lock
+
+test.py

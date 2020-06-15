@@ -1,6 +1,6 @@
 """Mysql database"""
-import mysql.connector
 import six
+import mysql.connector
 from ..base import Base
 from ..dialect import Dialect
 
