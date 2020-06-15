@@ -1,7 +1,11 @@
 # pymedoo - A lightweight database framework for python.
 it's inspired by [Medoo][1] for PHP and [Records][7] for python.
 
-![Pypi][8] ![Github][9] ![Codacy][10] ![Codacy coverage][11] ![Travis building][12]
+[![Pypi][8]][15]
+[![Github][9]][16]
+[![Codacy][10]][17]
+[![Codacy coverage][11]][17]
+[![Travis building][12]][18]
 
 ## Install
 ```bash
@@ -381,3 +385,7 @@ print(records.export('csv', delimiter = '\t'))
 [12]: https://img.shields.io/travis/pwwang/pymedoo.svg?style=flat-square
 [13]: https://dev.mysql.com/doc/connector-python/en/
 [14]: https://github.com/pwwang/pymedoo/issues/6
+[15]: https://pypi.org/project/pymedoo/
+[16]: https://github.com/pwwang/pymedoo
+[17]: https://app.codacy.com/manual/pwwang/pymedoo
+[18]: https://travis-ci.org/github/pwwang/pymedoo

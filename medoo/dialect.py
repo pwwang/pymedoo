@@ -33,6 +33,7 @@ class Dialect:
             if item == '*':
                 return item
             return '"%s"' % item.replace('"', '""')
+        # TODO: possible injection
         return str(item)
 
     @staticmethod
@@ -40,6 +41,7 @@ class Dialect:
         """How is VALUE being quoted"""
         if isinstance(item, six.string_types):
             return "'%s'" % item.replace("'", "''")
+        # TODO: possible injection
         return str(item)
 
     @classmethod
