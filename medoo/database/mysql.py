@@ -35,6 +35,23 @@ class DialectMysql(Dialect):
             return '`%s`' % item.replace('`', '``')
         return str(item)
 
+    @staticmethod
+    def value(item):
+        if isinstance(item, six.string_types):
+            # borrowed from 
+            # https://github.com/PyMySQL/PyMySQL/blob/3e71dd32e8ce868b090c282759eebdeabc960f58/pymysql/converters.py#L64 
+            # fixes #8
+            _escape_table = [chr(x) for x in range(128)]
+            _escape_table[0] = u'\\0'
+            _escape_table[ord('\\')] = u'\\\\'
+            _escape_table[ord('\n')] = u'\\n'
+            _escape_table[ord('\r')] = u'\\r'
+            _escape_table[ord('\032')] = u'\\Z'
+            _escape_table[ord('"')] = u'\\"'
+            _escape_table[ord("'")] = u"\\'"
+            return "'%s'" % item.translate(_escape_table)
+        return str(item)
+
 class Mysql(Base):
     """Mysql medoo wrapper"""
     def __init__(self, *args, **kwargs):
