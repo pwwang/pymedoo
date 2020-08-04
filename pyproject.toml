@@ -4,7 +4,7 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "pymedoo"
-version = "0.0.7"
+version = "0.0.8"
 description = "A lightweight database framework for python"
 homepage = "https://github.com/pwwang/pymedoo"
 repository = "https://github.com/pwwang/pymedoo"
