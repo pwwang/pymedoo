@@ -1,30 +1,37 @@
+.. role:: raw-html-m2r(raw)
+   :format: html
+
 
 pymedoo - A lightweight database framework for python.
 ======================================================
 
 it's inspired by `Medoo <https://medoo.in/>`_ for PHP and `Records <https://github.com/kennethreitz/records>`_ for python.
 
-
-.. image:: https://img.shields.io/pypi/v/medoo.svg?style=flat-square
-   :target: https://img.shields.io/pypi/v/medoo.svg?style=flat-square
+`
+.. image:: https://img.shields.io/pypi/v/pymedoo.svg?style=flat-square
+   :target: https://img.shields.io/pypi/v/pymedoo.svg?style=flat-square
    :alt: Pypi
- 
+ <https://pypi.org/project/pymedoo/>`_
+`
 .. image:: https://img.shields.io/github/tag/pwwang/pymedoo.svg?style=flat-square
    :target: https://img.shields.io/github/tag/pwwang/pymedoo.svg?style=flat-square
    :alt: Github
- 
+ <https://github.com/pwwang/pymedoo>`_
+`
 .. image:: https://img.shields.io/codacy/grade/83a79e32a9414a08be67d17b3e93a2ad.svg?style=flat-square
    :target: https://img.shields.io/codacy/grade/83a79e32a9414a08be67d17b3e93a2ad.svg?style=flat-square
    :alt: Codacy
- 
+ <https://app.codacy.com/manual/pwwang/pymedoo>`_
+`
 .. image:: https://img.shields.io/codacy/coverage/83a79e32a9414a08be67d17b3e93a2ad.svg?style=flat-square
    :target: https://img.shields.io/codacy/coverage/83a79e32a9414a08be67d17b3e93a2ad.svg?style=flat-square
    :alt: Codacy coverage
- 
+ <https://app.codacy.com/manual/pwwang/pymedoo>`_
+`
 .. image:: https://img.shields.io/travis/pwwang/pymedoo.svg?style=flat-square
    :target: https://img.shields.io/travis/pwwang/pymedoo.svg?style=flat-square
    :alt: Travis building
-
+ <https://travis-ci.org/github/pwwang/pymedoo>`_
 
 Install
 -------
@@ -44,7 +51,7 @@ Required packages for databases
    * - sqlite
      - `sqlite3 <https://docs.python.org/2/library/sqlite3.html>`_
    * - mysql
-     - `pymysql <https://github.com/PyMySQL/PyMySQL>`_
+     - :raw-html-m2r:`<del>\ `pymysql <https://github.com/PyMySQL/PyMySQL>`_\ </del>`\ (dropped) Use `mysql.connector <https://dev.mysql.com/doc/connector-python/en/>`_ instead. See `#6 <https://github.com/pwwang/pymedoo/issues/6>`_
    * - pgsql
      - `psycopg2 <http://initd.org/psycopg/docs/>`_
    * - mssql

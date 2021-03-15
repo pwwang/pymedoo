@@ -23,17 +23,20 @@ if os.path.exists(readme_path):
 
 setup(
     long_description=readme,
-    name='pymedoo',
-    version='0.0.5',
+    name='medoo',
+    version='0.0.8',
     description='A lightweight database framework for python',
-    python_requires='==3.*,>=3.5.0',
-    project_urls={"homepage": "https://github.com/pwwang/pymedoo", "repository": "https://github.com/pwwang/pymedoo"},
+    python_requires='==3.*,>=3.6.0',
+    project_urls={"homepage": "https://github.com/pwwang/pymedoo",
+                  "repository": "https://github.com/pwwang/pymedoo"},
     author='pwwang',
     author_email='pwwang@pwwang.com',
     license='MIT',
     packages=['medoo', 'medoo.database'],
     package_dir={"": "."},
-    package_data={},
-    install_requires=['six==1.*,>=1.12.0; python_version == "2.7.*" and python_version >= "2.7.0"'],
-    extras_require={"dev": ["pytest", "pytest-cov", "tablib==0.*,>=0.13.0"]},
+    package_data={"medoo": ["*.bak"]},
+    install_requires=[
+        'six==1.*,>=1.12.0; python_version == "2.7.*" and python_version >= "2.7.0"'],
+    extras_require={"dev": ["autopep8==1.*,>=1.5.3", "black==19.*,>=19.10.0",
+                            "pytest", "pytest-cov", "tablib==0.*,>=0.13.0"]},
 )

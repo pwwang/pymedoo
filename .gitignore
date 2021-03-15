@@ -110,3 +110,5 @@ poetry.lock
 
 # tagit
 *.bak
+
+.vscode/

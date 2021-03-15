@@ -4,7 +4,7 @@ import mysql.connector
 from ..base import Base
 from ..dialect import Dialect
 
-class _MysqlConnectorCursor(object):
+class _MysqlConnectorCursor:
     """Wrap up mysql.connector.cursor object
     When there is no more records, mysql.connector.cursor returns None
     However, more pythonic way is to raise a StopIteration Exception.
@@ -38,8 +38,8 @@ class DialectMysql(Dialect):
     @staticmethod
     def value(item):
         if isinstance(item, six.string_types):
-            # borrowed from 
-            # https://github.com/PyMySQL/PyMySQL/blob/3e71dd32e8ce868b090c282759eebdeabc960f58/pymysql/converters.py#L64 
+            # borrowed from
+            # https://github.com/PyMySQL/PyMySQL/blob/3e71dd32e8ce868b090c282759eebdeabc960f58/pymysql/converters.py#L64
             # fixes #8
             _escape_table = [chr(x) for x in range(128)]
             _escape_table[0] = u'\\0'
