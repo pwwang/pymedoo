@@ -35,3 +35,8 @@ tablib = "^3"
 line-length = 79
 target-version = ['py37', 'py38', 'py39']
 include = '\.pyi?$'
+
+[tool.pytest.ini_options]
+addopts = "-vv --cov=medoo --cov-report xml:.coverage.xml --cov-report term-missing"
+console_output_style = "progress"
+junit_family = "xunit1"
