@@ -387,7 +387,7 @@ print(records.export('csv', delimiter = '\t'))
 [9]: https://img.shields.io/github/tag/pwwang/pymedoo.svg?style=flat-square
 [10]: https://img.shields.io/codacy/grade/c049a2bf5ca84484b885cfbfedc27eab.svg?style=flat-square
 [11]: https://img.shields.io/codacy/coverage/c049a2bf5ca84484b885cfbfedc27eab.svg?style=flat-square
-[12]: https://img.shields.io/travis/pwwang/pymedoo.svg?style=flat-square
+[12]: https://img.shields.io/github/workflow/status/pwwang/pymedoo/Build%20and%20Deploy?style=flat-square
 [13]: https://dev.mysql.com/doc/connector-python/en/
 [14]: https://github.com/pwwang/pymedoo/issues/6
 [15]: https://pypi.org/project/pymedoo/
