@@ -1,7 +1,5 @@
-[run]
-source =
-	../pyppl
-omit =
-	pyppl/console.py
-	test*.py
-	workdir/*.py
+[report]
+exclude_lines =
+    if TYPE_CHECKING:
+    pragma: no cover
+    pass

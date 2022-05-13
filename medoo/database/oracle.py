@@ -3,8 +3,10 @@ import cx_Oracle
 from ..base import Base
 from ..dialect import Dialect
 
+
 class DialectOracle(Dialect):
     """Oracle dialect"""
+
 
 class Oracle(Base):
     """Oracle medoo wrapper"""

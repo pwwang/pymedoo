@@ -3,8 +3,10 @@ import psycopg2
 from ..base import Base
 from ..dialect import Dialect
 
+
 class DialectPgsql(Dialect):
     """Mysql dialect"""
+
 
 class Pgsql(Base):
     """Mysql medoo wrapper"""
@@ -15,8 +17,6 @@ class Pgsql(Base):
         self.dialect(DialectPgsql)
 
     def _connect(self, *args, **kwargs):
-        arguments = {
-            'port'   : 5432
-        }
+        arguments = {"port": 5432}
         arguments.update(kwargs)
         return psycopg2.connect(**arguments)

@@ -11,19 +11,27 @@ repository = "https://github.com/pwwang/pymedoo"
 readme = "README.md"
 authors = [ "pwwang <pwwang@pwwang.com>",]
 license = "MIT"
-[[tool.poetry.packages]]
-include = "medoo"
 
 [tool.poetry.dependencies]
-python = "^3.6"
+python = "^3.7"
+mysql-connector-python = {version = "^8", optional = true}
+psycopg2 = {version = "^2", optional = true}
+pymssql = {version = "^2", optional = true}
+cx-Oracle = {version = "^8", optional = true}
+
+[tool.poetry.extras]
+all = [ "mysql-connector-python", "psycopg2", "pymssql", "cx-Oracle" ]
+mysql = ["mysql-connector-python"]
+postgresql = ["psycopg2"]
+mssql = ["pymssql"]
+oracle = ["cx-Oracle"]
 
 [tool.poetry.dev-dependencies]
-pytest = "*"
-pytest-cov = "*"
-tablib = "^0.13.0"
-black = {version = "^19.10b0", allow-prereleases = true}
-autopep8 = "^1.5.3"
+pytest = "^7"
+pytest-cov = "^3"
+tablib = "^3"
 
-[tool.poetry.dependencies.six]
-version = "^1.12"
-python = "~2.7"
+[tool.black]
+line-length = 79
+target-version = ['py37', 'py38', 'py39']
+include = '\.pyi?$'

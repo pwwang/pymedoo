@@ -1,19 +1,24 @@
 """Record fetched from database"""
 from collections import OrderedDict
-from .exception import (RecordKeyError, RecordAttributeError,
-                        GetFromEmptyRecordError)
+from .exception import (
+    RecordKeyError,
+    RecordAttributeError,
+    GetFromEmptyRecordError,
+)
 from .util import reduce_datetimes
+
 
 class Record:
     """
     A row, from a query, from a database.
     The idea is borrowed from https://github.com/kennethreitz/records
     """
+
     def __init__(self, keys, values, readonly=True):
         # sacrifice some efficiency but support setitem, setattr operation
-        self.__dict__['_keys'] = keys if readonly else keys[:]
-        self.__dict__['_values'] = values if readonly else values[:]
-        self.__dict__['_readonly'] = readonly
+        self.__dict__["_keys"] = keys if readonly else keys[:]
+        self.__dict__["_values"] = values if readonly else values[:]
+        self.__dict__["_readonly"] = readonly
         # Ensure that lengths match properly.
         assert len(self.keys()) == len(self.values())
 
@@ -21,16 +26,16 @@ class Record:
         """
         Returns the list of column names from the query.
         """
-        return self.__dict__['_keys']
+        return self.__dict__["_keys"]
 
     def values(self):
         """
         Returns the list of values from the query.
         """
-        return self.__dict__['_values']
+        return self.__dict__["_values"]
 
     def __repr__(self):
-        return '<Record {}>'.format(self.as_dict())
+        return "<Record {}>".format(self.as_dict())
 
     def __getitem__(self, key):
         # Support for index-based lookup.
@@ -38,22 +43,24 @@ class Record:
             try:
                 return self.values()[key]
             except IndexError:
-                raise GetFromEmptyRecordError('No records returned.')
+                raise GetFromEmptyRecordError("No records returned.")
 
         # Support for string-based lookup.
         keys = list(self.keys())
         if key in keys:
             if keys.count(key) > 1:
-                raise RecordKeyError("Record contains multiple "
-                                     "'{}' fields.".format(key))
+                raise RecordKeyError(
+                    "Record contains multiple " "'{}' fields.".format(key)
+                )
             return self.values()[keys.index(key)]
 
         raise RecordKeyError("Record contains no '{}' field.".format(key))
 
     def __setitem__(self, key, val):
-        if self.__dict__['_readonly']:
-            raise RecordKeyError("Readonly Record does not support "
-                                 "setitem operation.")
+        if self.__dict__["_readonly"]:
+            raise RecordKeyError(
+                "Readonly Record does not support " "setitem operation."
+            )
 
         if isinstance(key, int):
             self.values()[key] = val
@@ -61,19 +68,21 @@ class Record:
 
         keycount = self.keys().count(key)
         if keycount > 1:
-            raise RecordKeyError("Record contains multiple "
-                                 "'{}' fields.".format(key))
+            raise RecordKeyError(
+                "Record contains multiple " "'{}' fields.".format(key)
+            )
         if keycount == 1:
             i = self.keys().index(key)
             self.values()[i] = val
-        else: # 0
+        else:  # 0
             self.keys().append(key)
             self.values().append(val)
 
     def __delitem__(self, key):
-        if self.__dict__['_readonly']:
-            raise RecordKeyError("Readonly Record does not support "
-                                 "delitem operation.")
+        if self.__dict__["_readonly"]:
+            raise RecordKeyError(
+                "Readonly Record does not support " "delitem operation."
+            )
 
         # Support for index-based lookup.
         if isinstance(key, int):
@@ -96,9 +105,10 @@ class Record:
             raise RecordAttributeError(exc) from exc
 
     def __setattr__(self, key, val):
-        if self.__dict__['_readonly']:
-            raise RecordAttributeError("Readonly Record does not "
-                                       "support setattr operation.")
+        if self.__dict__["_readonly"]:
+            raise RecordAttributeError(
+                "Readonly Record does not " "support setattr operation."
+            )
 
         try:
             self[key] = val
@@ -165,7 +175,7 @@ class Records:
         self.readonly = readonly
 
     def __repr__(self):
-        return '<Records: size={}, pending={}>'.format(len(self), self.pending)
+        return "<Records: size={}, pending={}>".format(len(self), self.pending)
 
     def __iter__(self):
         """
@@ -193,13 +203,15 @@ class Records:
 
     def __next__(self):
         try:
-            nextrow = Record(self.meta, list(next(self._cursor)),
-                             readonly=self.readonly)
+            nextrow = Record(
+                self.meta, list(next(self._cursor)), readonly=self.readonly
+            )
             self._allrows.append(nextrow)
             return nextrow
         except StopIteration:
             self.pending = False
-            raise StopIteration('Records contains no more rows.')
+            raise StopIteration("Records contains no more rows.")
+
     next = __next__
 
     def __getitem__(self, key):
@@ -221,7 +233,7 @@ class Records:
     def __len__(self):
         return len(self._allrows)
 
-    def export(self, format, **kwargs): # pylint: disable=redefined-builtin
+    def export(self, format, **kwargs):  # pylint: disable=redefined-builtin
         """
         Export the RecordCollection to a given format (courtesy of Tablib).
         """
@@ -233,6 +245,7 @@ class Records:
         A Tablib Dataset representation of the Records.
         """
         import tablib
+
         # Create a new Tablib Dataset.
         data = tablib.Dataset()
 

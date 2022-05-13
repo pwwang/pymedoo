@@ -5,7 +5,7 @@ it's inspired by [Medoo][1] for PHP and [Records][7] for python.
 [![Github][9]][16]
 [![Codacy][10]][17]
 [![Codacy coverage][11]][17]
-[![Travis building][12]][18]
+![Building][12]
 
 ## Install
 ```bash
@@ -14,13 +14,18 @@ pip install medoo
 
 ## Required packages for databases
 
-| Database | Package   |
-|----------|---------  |
-| sqlite   | [sqlite3][2]   |
-| mysql    | ~~[pymysql][3]~~(dropped) Use [mysql.connector][13] instead. See [#6][14] |
-| pgsql    | [psycopg2][4]  |
-| mssql    | [pymssql][5]   |
-| oracle   | [cx_Oracle][6] |
+| Database | Package   | Install |
+|----------|---------  | --------|
+| sqlite   | [sqlite3][2]   | `pip install medoo[sqlite]` |
+| mysql    | ~~[pymysql][3]~~(dropped) Use [mysql.connector][13] instead. See [#6][14] | `pip install medoo[mysql]` |
+| pgsql    | [psycopg2][4]  | `pip install medoo[pgsql]` |
+| mssql    | [pymssql][5]   | `pip install medoo[mssql]` |
+| oracle   | [cx_Oracle][6] | `pip install medoo[oracle]` |
+
+Install forr all supported databases:
+```bash
+pip install medoo[all]
+```
 
 ## Get started
 ### SELECT
@@ -378,14 +383,13 @@ print(records.export('csv', delimiter = '\t'))
 [5]: http://www.pymssql.org/en/stable/
 [6]: https://oracle.github.io/python-cx_Oracle/
 [7]: https://github.com/kennethreitz/records
-[8]: https://img.shields.io/pypi/v/pymedoo.svg?style=flat-square
+[8]: https://img.shields.io/pypi/v/medoo.svg?style=flat-square
 [9]: https://img.shields.io/github/tag/pwwang/pymedoo.svg?style=flat-square
-[10]: https://img.shields.io/codacy/grade/83a79e32a9414a08be67d17b3e93a2ad.svg?style=flat-square
-[11]: https://img.shields.io/codacy/coverage/83a79e32a9414a08be67d17b3e93a2ad.svg?style=flat-square
+[10]: https://img.shields.io/codacy/grade/c049a2bf5ca84484b885cfbfedc27eab.svg?style=flat-square
+[11]: https://img.shields.io/codacy/coverage/c049a2bf5ca84484b885cfbfedc27eab.svg?style=flat-square
 [12]: https://img.shields.io/travis/pwwang/pymedoo.svg?style=flat-square
 [13]: https://dev.mysql.com/doc/connector-python/en/
 [14]: https://github.com/pwwang/pymedoo/issues/6
 [15]: https://pypi.org/project/pymedoo/
 [16]: https://github.com/pwwang/pymedoo
-[17]: https://app.codacy.com/manual/pwwang/pymedoo
-[18]: https://travis-ci.org/github/pwwang/pymedoo
+[17]: https://app.codacy.com/gh/pwwang/pymedoo

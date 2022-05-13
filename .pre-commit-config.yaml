@@ -10,28 +10,27 @@ repos:
     -   id: end-of-file-fixer
     -   id: check-yaml
     -   id: check-added-large-files
--   repo: https://github.com/pre-commit/mirrors-pylint
-    rev: v2.4.4
-    hooks:
-    -   id: pylint
-        files: ^medoo/.+$
-        pass_filenames: false
-        types: [python]
-        args: [medoo]
 -   repo: local
     hooks:
-    -   id: poetry2setuppy
-        name: Convert pyproject.toml to setup.py
-        entry: dephell deps convert --from=poetry --to=setup.py
-        language: system
-        files: pyproject.toml
+    -   id: flake8
+        name: Run flake8
+        files: ^medoo/.+$
         pass_filenames: false
-    -   id: poetry2requirements
-        name: Convert pyproject.toml to requirements.txt
-        entry: dephell deps convert --from=poetry --to=requirements.txt
+        entry: flake8
+        args: [medoo]
+        types: [python]
         language: system
-        files: pyproject.toml
+    -   id: versionchecker
+        name: Check version agreement in pyproject and __version__
+        entry: bash -c
+        language: system
+        args:
+            - get_ver() { echo $(egrep "^__version|^version" $1 | cut -d= -f2 | sed 's/\"\| //g'); };
+              v1=`get_ver pyproject.toml`;
+              v2=`get_ver medoo/__init__.py`;
+              if [[ $v1 == $v2 ]]; then exit 0; else exit 1; fi
         pass_filenames: false
+        files: ^pyproject\.toml|medoo/__init__\.py$
     -   id: pytest
         name: Run pytest
         entry: pytest

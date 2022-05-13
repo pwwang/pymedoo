@@ -103,7 +103,7 @@ ENV/
 # jupyter
 *.ipynb
 
-poetry.lock
+# poetry.lock
 
 /test*.py
 /test.db
