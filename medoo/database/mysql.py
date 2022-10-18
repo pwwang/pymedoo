@@ -1,5 +1,4 @@
 """Mysql database"""
-import six
 import mysql.connector
 from ..base import Base
 from ..dialect import Dialect
@@ -32,7 +31,7 @@ class DialectMysql(Dialect):
 
     @staticmethod
     def quote(item):
-        if isinstance(item, six.string_types):
+        if isinstance(item, str):
             if item == "*":
                 return item
             return "`%s`" % item.replace("`", "``")
@@ -40,7 +39,7 @@ class DialectMysql(Dialect):
 
     @staticmethod
     def value(item):
-        if isinstance(item, six.string_types):
+        if isinstance(item, str):
             # borrowed from
             # https://github.com/PyMySQL/PyMySQL/blob/3e71dd32e8ce868b090c282759eebdeabc960f58/pymysql/converters.py#L64
             # fixes #8

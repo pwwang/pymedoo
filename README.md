@@ -1,4 +1,5 @@
-# pymedoo - A lightweight database framework for python.
+# pymedoo - A lightweight database framework for python
+
 it's inspired by [Medoo][1] for PHP and [Records][7] for python.
 
 [![Pypi][8]][15]
@@ -8,6 +9,7 @@ it's inspired by [Medoo][1] for PHP and [Records][7] for python.
 ![Building][12]
 
 ## Install
+
 ```bash
 pip install medoo
 ```
@@ -23,11 +25,13 @@ pip install medoo
 | oracle   | [cx_Oracle][6] | `pip install medoo[oracle]` |
 
 Install forr all supported databases:
+
 ```bash
 pip install medoo[all]
 ```
 
 ## Get started
+
 ### SELECT
 
 ```python
@@ -41,6 +45,7 @@ rs = me.select('Customers')
 
 print(rs.export('csv', delimiter = '\t'))
 ```
+
 |CustomerID|CustomerName|ContactName|Address|City|PostalCode|Country|
 |-|-|-|-|-|-|-|
 |1|Alfreds Futterkiste|Maria Anders|Obere Str. 57|Berlin|12209|Germany|
@@ -74,6 +79,7 @@ me.select('Customers', Field('CustomerID')+1)
 rs = me.select('Customers', Raw("'Name: ' || CustomerName AS name"))
 for r in rs: print(r.name)
 ```
+
 ```
 Name: Alfreds Futterkiste
 Name: Ana Trujillo Emparedados y helados
@@ -83,7 +89,9 @@ Name: Berglunds snabbköp
 ```
 
 ### WHERE
+
 #### Single condition
+
 ```python
 # SELECT * FROM "Customers" WHERE "CustomerID" = 1
 me.select('Customers', where = {'CustomerID': 1})
@@ -111,6 +119,7 @@ me.select('Customers', where = {Raw('INSTR("CustomerName", \'Antonio\')'):None})
 ```
 
 #### Compond
+
 ```python
 # SELECT * FROM "Customers" WHERE "CustomerID" IN (1,2,3) AND "CustomerName" LIKE '%b%'
 me.select('Customers', where = {
@@ -119,8 +128,8 @@ me.select('Customers', where = {
 })
 # SELECT * FROM "Customers"
 # WHERE ("CustomerID" IN (1,2,3) AND "CustomerName" LIKE '%b%') AND
-#	("CustomerName" = 'cd' OR "CustomerID" = 2) AND
-#	("CustomerID" < 3 AND NOT "CustomerName" = 'bc')
+# ("CustomerName" = 'cd' OR "CustomerID" = 2) AND
+# ("CustomerID" < 3 AND NOT "CustomerName" = 'bc')
 me.select('Customers', where = {
     'AND': {
         'CustomerID': (1,2,3),
@@ -139,11 +148,12 @@ me.select('Customers', where = {
 ```
 
 #### Modifier
+
 ```python
 # SELECT * FROM "Customers" ORDER BY "CustomerID" DESC, "CustomerName" ASC LIMIT 2 OFFSET 1
 # MSSQL:
 # SELECT * FROM "Customers" ORDER BY "CustomerID" DESC, "CustomerName" ASC
-#	OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY
+# OFFSET 1 ROWS FETCH NEXT 2 ROWS ONLY
 me.select('Customers', where = {
     'ORDER': {'CustomerID': 'desc', 'CustomerName': 'asc'},
     'LIMIT': (2, 1)
@@ -157,14 +167,17 @@ me.select('Customers', 'CustomerID|count(c), CustomerName', where = {
 ```
 
 ### Using subquery
+
 ```python
 print(me.select('Orders').export('csv', delimiter = '\t'))
 ```
+
 |OrderID|CustomerID|OrderDate|
 |-|-|-|
 |10308|2|1996-09-18|
 |10309|37|1996-09-19|
 |10310|77|1996-09-20|
+
 ```python
 # SELECT * FROM "Customers" AS "C",(SELECT "CustomerID" FROM "Orders") AS "O"
 #   WHERE "C"."CustomerID" = "O"."CustomerID"
@@ -182,6 +195,7 @@ me.select('Customers', where = {
 ```
 
 ### JOIN
+
 ```python
 # SELECT "O"."OrderID","C"."CustomerName","O"."OrderDate" FROM "Orders" AS "O"
 #   INNER JOIN "Customers" AS "C" ON "C"."CustomerID"="O"."CustomerID"
@@ -191,20 +205,21 @@ me.select('Orders(O)', 'O.OrderID,C.CustomerName,O.OrderDate', join = {
 
 # equivalent to
 me.select('Orders(O)', 'O.OrderID,C.CustomerName,O.OrderDate', join = {
-    'Customers(C)[><]': 'CustomerID'
+    '[><]Customers(C)': 'CustomerID'
 })
 # [>] LEFT JOIN, [<] RIGHT JOIN [<>] FULL OUTER JOIN
 
 # Join on multiple columns (same in different tables)
-# join = { 'Customers(C)[><]': ['CustomerID', 'OtherColumn'] }
+# join = { '[><]Customers(C)': ['CustomerID', 'OtherColumn'] }
 
 # Join on different columns: JOIN "Customers" AS "C" ON "C"."CustomerID"="O"."OtherID"
-# join = { 'Customers(C)[><]': {'CustomerID', 'OtherID'} }
+# join = { '[><]Customers(C)': {'CustomerID', 'OtherID'} }
 
 # You can join multiple tables, use OrderedDict if you want to keep the order.
 ```
 
 ### UNION
+
 ```python
 # SELECT "CustomerID" FROM "Customers" UNION SELECT "CustomerID" FROM "Orders"
 me.union(
@@ -220,7 +235,9 @@ me.union(
 ```
 
 ### Records
+
 `Medoo.select` and `Medoo.union` return a collection of records, which is basically a generator, but you can still get items from it, as it will consume the generate if necessary. The idea is borrowed from [Records][7].
+
 ```python
 records = me.select('Customers', 'CustomerID(id)')
 record  = records.first() # <Record {'id': 1}>
@@ -248,6 +265,7 @@ print(record.as_dict()) # {'id': 1}
 ```
 
 ### INSERT
+
 ```python
 # INSERT INTO "Orders" ("OrderID","CustomerID","OrderDate") VALUES (1,2,'1999-09-09'),(2,8,'2001-10-12')
 me.insert(
@@ -292,6 +310,7 @@ me.commit()
 ```
 
 ### UPDATE
+
 ```python
 # UPDATE "Orders" SET "CustomerID"=10 WHERE "OrderID" = 2
 me.update(
@@ -308,12 +327,14 @@ me.update(
 ```
 
 ### DELETE
+
 ```python
 # DELETE FROM "Orders" WHERE "OrderID" = 2
 me.delete('Orders', where = {'OrderID': 2})
 ```
 
 ### Other functions of `Medoo`
+
 ```python
 # Fetch a single value
 me.get('Customers', 'CustomerID', where = {'CustomerName': 'Around the Horn'}) # == 1
@@ -337,8 +358,10 @@ me.query(sql, commit = True)
 ```
 
 ### Extending `pymedoo`
+
 `pymedoo` is highly extendable, including the operators in `WHERE` conditions and `UPDATE SET` clause, `JOIN` operators, and some functions such as how to quote the table names, field names and values. All of these have been defined with `Dialect` class, what you need to do is just extend this class and specify it to the `Medoo` instance.
 For example, let's define a case-insensitive `LIKE` operator using a shortcut `~~`:
+
 ```python
 from medoo import Medoo, Dialect
 
@@ -370,11 +393,11 @@ records = me.select('Customers', where = {
 })
 print(records.export('csv', delimiter = '\t'))
 ```
+
 |CustomerID|CustomerName|ContactName|Address|City|PostalCode|Country|
 |-|-|-|-|-|-|-|
 |2|Ana Trujillo Emparedados y helados|Ana Trujillo|Avda. de la Constitución 2222|México D.F.|5021|Mexico|
 |3|Antonio Moreno Taquería|Antonio Moreno|Mataderos 2312|México D.F.|5023|Mexico|
-
 
 [1]: https://medoo.in/
 [2]: https://docs.python.org/2/library/sqlite3.html
