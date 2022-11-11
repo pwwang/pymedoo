@@ -151,5 +151,5 @@ class Base:
                     f"{ex}:\n{'-' * 32}\n"
                     f"{self.sql[:256]} ...\n"
                     f"{'-' * 32}\n"
-                    f"The above sql is slimed, full length: {len(self.sql}"
+                    f"The above sql is slimed, full length: {len(self.sql)}"
                 )
