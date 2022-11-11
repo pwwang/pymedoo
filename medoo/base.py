@@ -144,4 +144,12 @@ class Base:
             return True
         except Exception as ex:
             self.errors.append(str(ex))
-            raise type(ex)(str(ex) + ":\n" + self.sql)
+            if len(self.sql) <= 256:
+                raise type(ex)(f"{ex}:\n{'-' * 32}\n{self.sql}")
+            else:
+                raise type(ex)(
+                    f"{ex}:\n{'-' * 32}\n"
+                    f"{self.sql[:256]} ...\n"
+                    f"{'-' * 32}\n"
+                    f"The above sql is slimed, full length: {len(self.sql)}"
+                )
