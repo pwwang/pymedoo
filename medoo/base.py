@@ -147,4 +147,5 @@ class Base:
             if len(self.sql) <= 300:
                 raise type(ex)(str(ex) + ":\n" + self.sql)
             else:
-                raise type(ex)(str(ex) + ":\n" + self.sql[:300] + "\nsql shown above is slimed, the full sql length is " + str(len(self.sql)))
+                raise type(ex)("%s:\n%s\nsql shown above is slimed, full sql\
+                    length is %s" % (str(ex), self.sql[:300], len(self.sql)))
