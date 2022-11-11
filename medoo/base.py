@@ -144,7 +144,7 @@ class Base:
             return True
         except Exception as ex:
             self.errors.append(str(ex))
-            if len(self.sql) <= 300:
+            if len(self.sql) <= 256:
                 raise type(ex)(f"{ex}:\n{'-' * 32}\n{self.sql}")
             else:
                 raise type(ex)(
