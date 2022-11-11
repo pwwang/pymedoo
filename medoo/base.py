@@ -144,4 +144,7 @@ class Base:
             return True
         except Exception as ex:
             self.errors.append(str(ex))
-            raise type(ex)(str(ex) + ":\n" + self.sql)
+            if len(self.sql) <= 300:
+                raise type(ex)(str(ex) + ":\n" + self.sql)
+            else:
+                raise type(ex)(str(ex) + ":\n" + self.sql[:300] + "\nsql shown above is slimed, the full sql length is " + str(len(self.sql)))
